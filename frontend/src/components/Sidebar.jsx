@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MessagesSquare, BarChart3, Users, LogOut, MessageSquare, FolderOpen, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, BarChart3, Users, LogOut, MessageSquare, FolderOpen, Sun, Moon, Send } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/quick-replies', label: 'Quick Replies', icon: MessagesSquare },
+  { to: '/follow-up-kit', label: 'Follow-Up Kit', icon: Send },
   { to: '/packages', label: 'Paket & Itinerary', icon: FolderOpen },
   { to: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
   { to: '/admin', label: 'Admin', icon: Users, adminOnly: true },
