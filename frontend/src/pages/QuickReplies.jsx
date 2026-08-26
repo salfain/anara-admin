@@ -5,6 +5,7 @@ import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ReplyCard from '../components/ReplyCard';
 import ReplyModal from '../components/ReplyModal';
+import ReplyDetailModal from '../components/ReplyDetailModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 export default function QuickReplies() {
@@ -28,6 +29,7 @@ export default function QuickReplies() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewing, setViewing] = useState(null);
 
   useEffect(() => {
     api.get('/packages').then(({ data }) => setPackages(data.data)).catch(() => {});
@@ -73,6 +75,7 @@ export default function QuickReplies() {
       await navigator.clipboard.writeText(reply.answer);
       await api.post(`/quick-replies/${reply.id}/use`);
       push('Copied!');
+      setViewing(null);
       fetchReplies();
     } catch {
       push('Gagal menyalin', 'error');
@@ -208,6 +211,7 @@ export default function QuickReplies() {
               onCopy={handleCopy}
               onEdit={openEdit}
               onDelete={setDeleteTarget}
+              onView={setViewing}
             />
           ))}
         </div>
@@ -250,6 +254,12 @@ export default function QuickReplies() {
         categories={categories}
         initial={editing}
         saving={saving}
+      />
+
+      <ReplyDetailModal
+        reply={viewing}
+        onClose={() => setViewing(null)}
+        onCopy={handleCopy}
       />
 
       <ConfirmDialog
