@@ -17,7 +17,7 @@ export default function Admin() {
   const [tab, setTab] = useState('users');
 
   return (
-    <div className="p-8 flex flex-col gap-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
       <div>
         <div className="text-[28px] font-bold text-gray-dark">Admin Panel</div>
         <div className="text-sm text-secondary mt-1">Kelola anggota tim, kategori, paket, dan pantau aktivitas</div>
@@ -134,19 +134,19 @@ function UsersTab({ currentUser }) {
   return (
     <>
       <div className="bg-surface rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between p-6 flex-wrap gap-3">
+        <div className="flex items-center justify-between p-4 sm:p-6 flex-wrap gap-3">
           <div className="text-base font-semibold text-gray-dark">User Management</div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-3 items-center flex-wrap w-full sm:w-auto">
             <input
               type="text"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="Cari email/nama..."
-              className="h-9 px-3 border border-gray-med rounded-lg text-[13px] w-[220px]"
+              className="h-9 px-3 border border-gray-med rounded-lg text-[13px] flex-1 sm:flex-none sm:w-[220px] min-w-0"
             />
             <button
               onClick={() => setShowInvite(true)}
-              className="h-9 px-4 text-white rounded-lg text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-4 text-white rounded-lg text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
               style={{ background: '#2563eb' }}
             >
               <Plus size={14} />

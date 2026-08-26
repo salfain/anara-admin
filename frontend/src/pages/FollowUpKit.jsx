@@ -245,7 +245,7 @@ export default function FollowUpKit() {
   }
 
   return (
-    <div className="p-8 flex flex-col gap-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[28px] font-bold text-gray-dark">Follow-Up Kit</div>

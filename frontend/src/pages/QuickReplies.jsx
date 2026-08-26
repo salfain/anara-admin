@@ -131,7 +131,7 @@ export default function QuickReplies() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="sticky top-0 z-10 bg-surface border-b border-gray-med px-8 py-4 flex items-center gap-4">
-        <div className="flex-1 relative max-w-[520px] ml-10 lg:ml-0">
+        <div className="flex-1 relative max-w-[520px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
             type="text"
@@ -143,15 +143,15 @@ export default function QuickReplies() {
         </div>
       </div>
 
-      <div className="p-8 flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <div className="text-[28px] font-bold text-gray-dark leading-tight">Quick Replies</div>
+            <div className="text-2xl sm:text-[28px] font-bold text-gray-dark leading-tight">Quick Replies</div>
             <div className="text-sm text-secondary mt-1">Cari, salin, dan kelola template jawaban customer</div>
           </div>
           <button
             onClick={openAdd}
-            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
             style={{ background: '#2563eb' }}
           >
             <Plus size={16} />

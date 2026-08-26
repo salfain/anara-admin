@@ -109,7 +109,7 @@ export default function Packages() {
   }
 
   return (
-    <div className="p-8 flex flex-col gap-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div className="text-[28px] font-bold text-gray-dark">Paket & Itinerary</div>

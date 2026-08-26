@@ -11,7 +11,7 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, on
       onClick={() => onView(reply)}
       className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-3 transition-shadow hover:shadow-lg hover:-translate-y-0.5 duration-150 cursor-pointer"
     >
-      <div className="flex justify-between items-start gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4">
         <div className="text-base font-semibold text-gray-dark">{reply.question}</div>
         <div className="flex gap-2 shrink-0">
           <button

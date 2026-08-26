@@ -1,24 +1,16 @@
-import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
+import MobileBottomNav from './MobileBottomNav';
 import Toast from './Toast';
 
 export default function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="h-screen w-full flex overflow-hidden bg-gray-light">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="lg:hidden fixed top-4 left-4 z-20 w-10 h-10 rounded-lg bg-surface border border-gray-med flex items-center justify-center shadow-sm"
-        >
-          <Menu size={18} />
-        </button>
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto pb-20 lg:pb-0">
         <Outlet />
       </div>
+      <MobileBottomNav />
       <Toast />
     </div>
   );

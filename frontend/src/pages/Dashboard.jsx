@@ -29,7 +29,7 @@ export default function Dashboard() {
     : [];
 
   return (
-    <div className="p-8 flex flex-col gap-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
       <div>
         <div className="text-[28px] font-bold text-gray-dark">Selamat datang kembali, {user?.name?.split(' ')[0]} 👋</div>
         <div className="text-sm text-secondary mt-1">Berikut ringkasan aktivitas quick replies tim CS.</div>
