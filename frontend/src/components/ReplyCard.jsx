@@ -39,7 +39,7 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, on
           )}
         </div>
       </div>
-      <div className="text-sm text-gray-700 leading-relaxed line-clamp-2">{reply.answer}</div>
+      <div className="text-sm text-gray-dark leading-relaxed line-clamp-2">{reply.answer}</div>
       <div className="flex items-center gap-2 flex-wrap">
         {reply.package_name && (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#dbeafe', color: '#1e40af' }}>

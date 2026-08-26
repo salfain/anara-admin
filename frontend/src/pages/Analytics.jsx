@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../api/client';
 import useAutoRefresh from '../hooks/useAutoRefresh';
+import useThemeStore from '../store/themeStore';
 
 const PIE_COLORS = ['#2563eb', '#60a5fa', '#f59e0b', '#10b981', '#a78bfa', '#f87171'];
 
@@ -21,6 +22,8 @@ function getRange(preset) {
 }
 
 export default function Analytics() {
+  const theme = useThemeStore((s) => s.theme);
+  const tickColor = theme === 'dark' ? '#f1f5f9' : '#111827';
   const [preset, setPreset] = useState('month');
   const [summary, setSummary] = useState({ totalReplies: 0, totalUsage: 0, activeUsers: 0 });
   const [topQuestions, setTopQuestions] = useState([]);
@@ -92,7 +95,7 @@ export default function Analytics() {
                     type="category"
                     dataKey="question"
                     width={180}
-                    tick={{ fontSize: 12, fill: '#111827' }}
+                    tick={{ fontSize: 12, fill: tickColor }}
                     tickFormatter={(v) => (v.length > 26 ? v.slice(0, 26) + '…' : v)}
                   />
                   <Tooltip />
@@ -153,10 +156,10 @@ export default function Analytics() {
             <tbody>
               {categories.map((c) => (
                 <tr key={c.category}>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{c.category}</td>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{c.replies}</td>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{c.totalUsage}</td>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{c.percentOfTotal}%</td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{c.category}</td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{c.replies}</td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{c.totalUsage}</td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{c.percentOfTotal}%</td>
                 </tr>
               ))}
             </tbody>

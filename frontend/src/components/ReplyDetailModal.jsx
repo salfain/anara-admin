@@ -17,7 +17,7 @@ export default function ReplyDetailModal({ reply, onClose, onCopy }) {
         </div>
 
         <div className="p-6 flex flex-col gap-4">
-          <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{reply.answer}</div>
+          <div className="text-sm text-gray-dark leading-relaxed whitespace-pre-wrap">{reply.answer}</div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {reply.package_name && (

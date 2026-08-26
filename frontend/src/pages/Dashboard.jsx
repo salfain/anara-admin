@@ -75,7 +75,7 @@ export default function Dashboard() {
           <div className="text-center text-sm text-secondary py-10">Belum ada balasan.</div>
         )}
         {!loading && (stats?.topReplies || []).map((r, i) => (
-          <div key={r.id} className={`px-6 py-3.5 flex items-center justify-between gap-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+          <div key={r.id} className={`px-6 py-3.5 flex items-center justify-between gap-3 ${i > 0 ? 'border-t border-gray-med' : ''}`}>
             <div className="min-w-0">
               <div className="text-sm font-semibold text-gray-dark truncate">{r.question}</div>
               <div className="flex gap-1.5 items-center mt-1">

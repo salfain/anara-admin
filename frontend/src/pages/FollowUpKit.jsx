@@ -108,7 +108,7 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-2">
+                  <pre className="text-sm text-gray-dark whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-2">
                     {highlight(step)}
                   </pre>
                   <CopyButton text={step} small />
@@ -134,7 +134,7 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
             </div>
             {template.variants?.[variantIndex] && (
               <>
-                <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
+                <pre className="text-sm text-gray-dark whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
                   {highlight(template.variants[variantIndex].text)}
                 </pre>
                 <CopyButton text={template.variants[variantIndex].text} />
@@ -145,7 +145,7 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
 
         {template.kind === 'text' && (
           <>
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
+            <pre className="text-sm text-gray-dark whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
               {highlight(template.text || '')}
             </pre>
             <CopyButton text={template.text || ''} />
@@ -277,24 +277,35 @@ export default function FollowUpKit() {
         />
       </div>
 
-      <div className="bg-surface border border-gray-med rounded-xl p-5">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-secondary mb-4">Alur waktu yang disarankan</div>
-        <div className="grid gap-x-4 gap-y-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          {CADENCE.map((c, i) => (
-            <div key={i} className="flex flex-col gap-1.5 min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                  style={{ background: '#dbeafe', color: '#1e40af' }}
-                >
-                  {i + 1}
-                </span>
-                <div className="h-px flex-1" style={{ background: 'var(--color-gray-med)' }} />
+      <div className="bg-surface border border-gray-med rounded-xl p-5 sm:p-6">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-secondary mb-5">Alur waktu yang disarankan</div>
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="inline-flex min-w-full">
+            {CADENCE.map((c, i) => (
+              <div key={i} className="flex flex-col items-center flex-none w-[124px] group">
+                <div className="flex items-center w-full">
+                  <div
+                    className="flex-1 h-[2px] rounded-full"
+                    style={{ background: i === 0 ? 'transparent' : '#2563eb', opacity: i === 0 ? 0 : 0.35 }}
+                  />
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 transition-transform duration-150 group-hover:scale-110"
+                    style={{ background: '#2563eb', color: '#fff', boxShadow: '0 2px 8px rgba(37,99,235,0.35)' }}
+                  >
+                    {i + 1}
+                  </div>
+                  <div
+                    className="flex-1 h-[2px] rounded-full"
+                    style={{ background: i === CADENCE.length - 1 ? 'transparent' : '#2563eb', opacity: i === CADENCE.length - 1 ? 0 : 0.35 }}
+                  />
+                </div>
+                <div className="text-center mt-3 px-1.5">
+                  <div className="text-[13px] font-semibold leading-snug" style={{ color: '#2563eb' }}>{c.time}</div>
+                  <div className="text-xs text-secondary leading-snug mt-1">{c.what}</div>
+                </div>
               </div>
-              <div className="text-[13px] font-semibold truncate" style={{ color: '#2563eb' }}>{c.time}</div>
-              <div className="text-[13px] text-secondary">{c.what}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

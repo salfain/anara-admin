@@ -29,7 +29,7 @@ export default function Admin() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className="h-9 px-4 rounded-lg text-[13px] font-semibold cursor-pointer"
-            style={tab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+            style={tab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: 'var(--color-secondary)' }}
           >
             {t.label}
           </button>
@@ -170,9 +170,9 @@ function UsersTab({ currentUser }) {
               )}
               {!loading && users.map((u) => (
                 <tr key={u.id}>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{u.email}</td>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">{u.name}</td>
-                  <td className="text-sm px-4 py-3.5 border-b border-gray-100">
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{u.email}</td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{u.name}</td>
+                  <td className="text-sm px-4 py-3.5 border-b border-gray-med">
                     <select
                       value={u.role}
                       onChange={(e) => handleRoleChange(u, e.target.value)}
@@ -184,10 +184,10 @@ function UsersTab({ currentUser }) {
                       <option value="admin">Admin</option>
                     </select>
                   </td>
-                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-100">
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">
                     {new Date(u.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3.5 border-b border-gray-100">
+                  <td className="px-4 py-3.5 border-b border-gray-med">
                     <div className="flex gap-2">
                       <button
                         onClick={() => setDeleteTarget(u)}
@@ -229,13 +229,13 @@ function UsersTab({ currentUser }) {
         <div className="flex flex-col">
           {activity.length === 0 && <div className="text-sm text-secondary py-4">Belum ada aktivitas.</div>}
           {activity.map((a, i) => (
-            <div key={a.id} className={`flex gap-3 py-3 ${i < activity.length - 1 ? 'border-b border-gray-100' : ''}`}>
+            <div key={a.id} className={`flex gap-3 py-3 ${i < activity.length - 1 ? 'border-b border-gray-med' : ''}`}>
               <span
                 className="w-2 h-2 rounded-sm mt-1.5 shrink-0"
                 style={{ background: a.action === 'delete' ? '#ef4444' : a.action === 'update' ? '#f59e0b' : '#10b981' }}
               />
               <div className="text-sm text-gray-dark">
-                {a.description} <span className="text-slate-400">· {new Date(a.created_at).toLocaleString('id-ID')}</span>
+                {a.description} <span className="text-secondary">· {new Date(a.created_at).toLocaleString('id-ID')}</span>
               </div>
             </div>
           ))}
@@ -404,11 +404,11 @@ function CategoriesTab() {
             {loading && <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
             {!loading && categories.map((c) => (
               <tr key={c.id}>
-                <td className="px-4 py-3 border-b border-gray-100">
+                <td className="px-4 py-3 border-b border-gray-med">
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#ede9fe', color: '#6d28d9' }}>{c.name}</span>
                 </td>
-                <td className="text-sm text-gray-dark px-4 py-3 border-b border-gray-100">{c.reply_count}</td>
-                <td className="px-4 py-3 border-b border-gray-100">
+                <td className="text-sm text-gray-dark px-4 py-3 border-b border-gray-med">{c.reply_count}</td>
+                <td className="px-4 py-3 border-b border-gray-med">
                   <button onClick={() => setDeleteTarget(c)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
                 </td>
               </tr>
@@ -520,8 +520,8 @@ function PackagesTab() {
             {loading && <tr><td colSpan={2} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
             {!loading && packages.map((p) => (
               <tr key={p.id}>
-                <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-100">{p.name}</td>
-                <td className="px-4 py-3 border-b border-gray-100">
+                <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-med">{p.name}</td>
+                <td className="px-4 py-3 border-b border-gray-med">
                   <button onClick={() => setDeleteTarget(p)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
                 </td>
               </tr>
