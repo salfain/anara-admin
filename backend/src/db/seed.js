@@ -16,6 +16,12 @@ async function seed() {
       ['admin@anara.com', adminPasswordHash, 'Admin Anara']
     );
 
+    await client.query(
+      `INSERT INTO categories (name)
+       VALUES ('Harga'), ('Jadwal'), ('Visa'), ('Pembayaran'), ('Pembatalan')
+       ON CONFLICT (name) DO NOTHING`
+    );
+
     const packagesRes = await client.query(
       `INSERT INTO packages (name, destination, duration, year, dates, price, status)
        VALUES

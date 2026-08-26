@@ -56,6 +56,23 @@ CREATE TABLE IF NOT EXISTS activity_log (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS categories (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) UNIQUE NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS package_files (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  mime_type VARCHAR(100),
+  size INT,
+  uploaded_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_quick_replies_category ON quick_replies(category);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_package_id ON quick_replies(package_id);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_tags ON quick_replies(tags);

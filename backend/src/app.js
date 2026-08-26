@@ -6,6 +6,8 @@ const quickRepliesRoutes = require('./routes/quickReplies');
 const packagesRoutes = require('./routes/packages');
 const analyticsRoutes = require('./routes/analytics');
 const usersRoutes = require('./routes/users');
+const categoriesRoutes = require('./routes/categories');
+const packageFilesRoutes = require('./routes/packageFiles');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -20,6 +22,8 @@ app.use('/api/quick-replies', quickRepliesRoutes);
 app.use('/api/packages', packagesRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/categories', categoriesRoutes);
+app.use('/api/package-files', packageFilesRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
