@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import QuickReplies from './pages/QuickReplies';
 import Packages from './pages/Packages';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
@@ -22,6 +23,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/quick-replies" element={<QuickReplies />} />
           <Route path="/packages" element={<Packages />} />
           <Route
             path="/analytics"

@@ -52,7 +52,7 @@ function UsersTab({ currentUser }) {
   const [loading, setLoading] = useState(true);
 
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'cs' });
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'cs', password: '' });
   const [inviting, setInviting] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -104,7 +104,7 @@ function UsersTab({ currentUser }) {
       await api.post('/users', inviteForm);
       push('User berhasil ditambahkan');
       setShowInvite(false);
-      setInviteForm({ email: '', name: '', role: 'cs' });
+      setInviteForm({ email: '', name: '', role: 'cs', password: '' });
       fetchUsers();
     } catch (err) {
       push(err.response?.data?.error || 'Gagal menambah user', 'error');
@@ -262,6 +262,18 @@ function UsersTab({ currentUser }) {
                 required
                 value={inviteForm.email}
                 onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={inviteForm.password}
+                onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })}
+                placeholder="Minimal 8 karakter"
                 className="h-10 px-3 border border-gray-med rounded-lg text-sm"
               />
             </div>

@@ -1,5 +1,4 @@
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 const pool = require('../db/pool');
 const { logActivity } = require('./activityController');
 
@@ -44,12 +43,15 @@ async function list(req, res, next) {
 
 async function invite(req, res, next) {
   try {
-    const { email, name, role = 'cs' } = req.body;
+    const { email, name, role = 'cs', password } = req.body;
     if (!email || !name) {
       return res.status(400).json({ error: 'Email and name are required' });
     }
     if (!['cs', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Role must be cs or admin' });
+    }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -57,9 +59,7 @@ async function invite(req, res, next) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Temporary password; user resets it on first login (Phase 2: email invite flow).
-    const tempPassword = crypto.randomBytes(9).toString('base64');
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, name, role)
@@ -71,7 +71,7 @@ async function invite(req, res, next) {
     const user = result.rows[0];
     await logActivity(req.user.id, 'invite', 'user', user.id, `mengundang user baru "${user.email}"`);
 
-    res.status(201).json({ data: sanitizeUser(user), tempPassword });
+    res.status(201).json({ data: sanitizeUser(user) });
   } catch (err) {
     next(err);
   }

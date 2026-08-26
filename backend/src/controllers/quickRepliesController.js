@@ -1,6 +1,37 @@
 const pool = require('../db/pool');
 const { logActivity } = require('./activityController');
 
+async function stats(req, res, next) {
+  try {
+    const totalReplies = await pool.query('SELECT COUNT(*) FROM quick_replies');
+    const totalUsage = await pool.query('SELECT COALESCE(SUM(usage_count), 0) AS total FROM quick_replies');
+    const totalUsers = await pool.query('SELECT COUNT(*) FROM users');
+    const topCategory = await pool.query(
+      `SELECT category FROM quick_replies WHERE category IS NOT NULL
+       GROUP BY category ORDER BY SUM(usage_count) DESC LIMIT 1`
+    );
+    const topReplies = await pool.query(
+      `SELECT qr.*, p.name AS package_name
+       FROM quick_replies qr
+       LEFT JOIN packages p ON p.id = qr.package_id
+       ORDER BY qr.usage_count DESC
+       LIMIT 5`
+    );
+
+    res.json({
+      data: {
+        totalReplies: parseInt(totalReplies.rows[0].count, 10),
+        totalUsage: parseInt(totalUsage.rows[0].total, 10),
+        totalUsers: parseInt(totalUsers.rows[0].count, 10),
+        topCategory: topCategory.rows[0]?.category || '-',
+        topReplies: topReplies.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function list(req, res, next) {
   try {
     const {
@@ -194,4 +225,4 @@ async function trackUsage(req, res, next) {
   }
 }
 
-module.exports = { list, getOne, create, update, remove, trackUsage };
+module.exports = { stats, list, getOne, create, update, remove, trackUsage };
