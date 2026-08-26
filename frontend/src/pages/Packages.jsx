@@ -66,7 +66,8 @@ export default function Packages() {
 
   async function fetchBlobUrl(f) {
     const res = await api.get(`/package-files/${f.id}/download`, { responseType: 'blob' });
-    return window.URL.createObjectURL(new Blob([res.data]));
+    const type = f.mime_type || res.data.type || 'application/octet-stream';
+    return window.URL.createObjectURL(new Blob([res.data], { type }));
   }
 
   async function handleView(f) {
