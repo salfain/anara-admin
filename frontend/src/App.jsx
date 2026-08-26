@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Packages from './pages/Packages';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
 import Layout from './components/Layout';
@@ -21,6 +22,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/packages" element={<Packages />} />
           <Route
             path="/analytics"
             element={

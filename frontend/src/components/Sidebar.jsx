@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Users, LogOut, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, LogOut, MessageSquare, FolderOpen } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/packages', label: 'Paket & Itinerary', icon: FolderOpen },
   { to: '/analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
   { to: '/admin', label: 'Admin', icon: Users, adminOnly: true },
 ];

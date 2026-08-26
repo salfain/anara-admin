@@ -5,8 +5,44 @@ import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
 
+const TABS = [
+  { key: 'users', label: 'Users' },
+  { key: 'categories', label: 'Categories' },
+  { key: 'packages', label: 'Packages' },
+];
+
 export default function Admin() {
   const { user: currentUser } = useAuthStore();
+  const [tab, setTab] = useState('users');
+
+  return (
+    <div className="p-8 flex flex-col gap-6">
+      <div>
+        <div className="text-[28px] font-bold text-gray-dark">Admin Panel</div>
+        <div className="text-sm text-secondary mt-1">Kelola anggota tim, kategori, paket, dan pantau aktivitas</div>
+      </div>
+
+      <div className="flex gap-1 bg-white rounded-xl p-1.5 w-fit border border-gray-med">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className="h-9 px-4 rounded-lg text-[13px] font-semibold cursor-pointer"
+            style={tab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: '#64748b' }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'users' && <UsersTab currentUser={currentUser} />}
+      {tab === 'categories' && <CategoriesTab />}
+      {tab === 'packages' && <PackagesTab />}
+    </div>
+  );
+}
+
+function UsersTab({ currentUser }) {
   const push = useToastStore((s) => s.push);
 
   const [users, setUsers] = useState([]);
@@ -92,12 +128,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="p-8 flex flex-col gap-6">
-      <div>
-        <div className="text-[28px] font-bold text-gray-dark">Admin Panel</div>
-        <div className="text-sm text-secondary mt-1">Kelola anggota tim dan pantau aktivitas</div>
-      </div>
-
+    <>
       <div className="bg-white rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-6 flex-wrap gap-3">
           <div className="text-base font-semibold text-gray-dark">User Management</div>
@@ -189,7 +220,7 @@ export default function Admin() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl p-6 flex flex-col gap-4">
+      <div className="bg-white rounded-xl p-6 flex flex-col gap-4 mt-6">
         <div className="text-base font-semibold text-gray-dark">Team Activity Log</div>
         <div className="flex flex-col">
           {activity.length === 0 && <div className="text-sm text-secondary py-4">Belum ada aktivitas.</div>}
@@ -261,6 +292,233 @@ export default function Admin() {
         open={Boolean(deleteTarget)}
         title="Hapus User?"
         message={`User "${deleteTarget?.email}" akan dihapus permanen.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
+    </>
+  );
+}
+
+function CategoriesTab() {
+  const push = useToastStore((s) => s.push);
+  const [categories, setCategories] = useState([]);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function fetchCategories() {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/categories');
+      setCategories(data.data);
+    } catch {
+      push('Gagal memuat kategori', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    if (!name.trim()) return setError('Nama kategori wajib diisi.');
+    setSaving(true);
+    try {
+      await api.post('/categories', { name: name.trim() });
+      setName('');
+      setError('');
+      push('Kategori ditambahkan.');
+      fetchCategories();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Gagal menambah kategori');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.delete(`/categories/${deleteTarget.id}`);
+      push('Kategori dihapus.');
+      setDeleteTarget(null);
+      fetchCategories();
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menghapus kategori', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-6 flex-wrap items-start">
+      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-white border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+        <div className="text-base font-semibold text-gray-dark">Add Category</div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Category name *</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Refund"
+            className="h-9 px-3 border border-gray-med rounded-lg text-sm"
+          />
+        </div>
+        {error && <div className="text-xs text-red-600">{error}</div>}
+        <button type="submit" disabled={saving} className="h-9 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+          {saving ? 'Menyimpan...' : 'Add Category'}
+        </button>
+      </form>
+
+      <div className="flex-1 min-w-[280px] bg-white border border-gray-med rounded-xl overflow-hidden">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {['Category', 'Replies', 'Actions'].map((h) => (
+                <th key={h} className="text-xs font-semibold uppercase tracking-wide text-secondary text-left px-4 py-2.5 border-b border-gray-med">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
+            {!loading && categories.map((c) => (
+              <tr key={c.id}>
+                <td className="px-4 py-3 border-b border-gray-100">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#ede9fe', color: '#6d28d9' }}>{c.name}</span>
+                </td>
+                <td className="text-sm text-gray-dark px-4 py-3 border-b border-gray-100">{c.reply_count}</td>
+                <td className="px-4 py-3 border-b border-gray-100">
+                  <button onClick={() => setDeleteTarget(c)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                </td>
+              </tr>
+            ))}
+            {!loading && categories.length === 0 && (
+              <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Belum ada kategori.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus Category?"
+        message={`Kategori "${deleteTarget?.name}" akan dihapus.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
+    </div>
+  );
+}
+
+function PackagesTab() {
+  const push = useToastStore((s) => s.push);
+  const [packages, setPackages] = useState([]);
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function fetchPackages() {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/packages');
+      setPackages(data.data);
+    } catch {
+      push('Gagal memuat paket', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { fetchPackages(); }, []);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    if (!name.trim()) return setError('Nama paket wajib diisi.');
+    setSaving(true);
+    try {
+      await api.post('/packages', { name: name.trim() });
+      setName('');
+      setError('');
+      push('Paket ditambahkan.');
+      fetchPackages();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Gagal menambah paket');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.delete(`/packages/${deleteTarget.id}`);
+      push('Paket dihapus.');
+      setDeleteTarget(null);
+      fetchPackages();
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menghapus paket', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-6 flex-wrap items-start">
+      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-white border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+        <div className="text-base font-semibold text-gray-dark">Add Package</div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Package name *</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Korea"
+            className="h-9 px-3 border border-gray-med rounded-lg text-sm"
+          />
+        </div>
+        {error && <div className="text-xs text-red-600">{error}</div>}
+        <button type="submit" disabled={saving} className="h-9 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+          {saving ? 'Menyimpan...' : 'Add Package'}
+        </button>
+      </form>
+
+      <div className="flex-1 min-w-[280px] bg-white border border-gray-med rounded-xl overflow-hidden">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {['Package', 'Actions'].map((h) => (
+                <th key={h} className="text-xs font-semibold uppercase tracking-wide text-secondary text-left px-4 py-2.5 border-b border-gray-med">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && <tr><td colSpan={2} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
+            {!loading && packages.map((p) => (
+              <tr key={p.id}>
+                <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-100">{p.name}</td>
+                <td className="px-4 py-3 border-b border-gray-100">
+                  <button onClick={() => setDeleteTarget(p)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                </td>
+              </tr>
+            ))}
+            {!loading && packages.length === 0 && (
+              <tr><td colSpan={2} className="text-sm text-secondary text-center py-8">Belum ada paket.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus Package?"
+        message={`Paket "${deleteTarget?.name}" akan dihapus.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         confirming={deleting}

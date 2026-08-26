@@ -7,8 +7,6 @@ import ReplyCard from '../components/ReplyCard';
 import ReplyModal from '../components/ReplyModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-const CATEGORIES = ['Harga', 'Jadwal', 'Visa', 'Pembayaran', 'Umum'];
-
 export default function Dashboard() {
   const { user } = useAuthStore();
   const push = useToastStore((s) => s.push);
@@ -16,6 +14,7 @@ export default function Dashboard() {
 
   const [replies, setReplies] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -32,6 +31,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     api.get('/packages').then(({ data }) => setPackages(data.data)).catch(() => {});
+    api.get('/categories').then(({ data }) => setCategories(data.data)).catch(() => {});
   }, []);
 
   const fetchReplies = useCallback(async () => {
@@ -162,7 +162,7 @@ export default function Dashboard() {
               className="h-9 px-3 border border-gray-med rounded-lg text-sm bg-gray-light min-w-[150px]"
             >
               <option value="">Semua Kategori</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-1">
@@ -247,6 +247,7 @@ export default function Dashboard() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
         packages={packages}
+        categories={categories}
         initial={editing}
         saving={saving}
       />

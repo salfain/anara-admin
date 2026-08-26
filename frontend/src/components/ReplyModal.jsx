@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
-const CATEGORIES = ['Harga', 'Jadwal', 'Visa', 'Pembayaran', 'Umum'];
-
-export default function ReplyModal({ open, onClose, onSubmit, packages, initial, saving }) {
+export default function ReplyModal({ open, onClose, onSubmit, packages, categories, initial, saving }) {
   const [form, setForm] = useState({ question: '', answer: '', package_id: '', category: '', tags: '' });
   const [errors, setErrors] = useState({});
 
@@ -110,8 +108,8 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, initial,
                 className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
                 <option value="">Pilih kategori...</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
                 ))}
               </select>
             </div>
