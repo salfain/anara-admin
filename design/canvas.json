@@ -1,0 +1,10 @@
+{
+  "artboards": [
+    { "file": "Login.dc.html", "x": 0, "y": 0, "w": 480, "h": 900 },
+    { "file": "Main.dc.html", "x": 600, "y": 0, "w": 1440, "h": 1000 },
+    { "file": "Modal.dc.html", "x": 2160, "y": 0, "w": 900, "h": 760 },
+    { "file": "Analytics.dc.html", "x": 3180, "y": 0, "w": 1440, "h": 1000 },
+    { "file": "Admin.dc.html", "x": 4740, "y": 0, "w": 1440, "h": 1080 }
+  ],
+  "launch": { "view": "canvas" }
+}

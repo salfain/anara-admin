@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f9fafb;}
+    th{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;text-align:left;padding:10px 16px;border-bottom:1px solid #e5e7eb;}
+    td{font-size:14px;color:#111827;padding:14px 16px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+    input:focus, select:focus{outline:none;border-color:#2563eb !important;box-shadow:0 0 0 3px rgba(37,99,235,0.15);}
+  </style>
+</helmet>
+<div style="width:1440px;min-height:1000px;display:flex;background:#f9fafb;">
+  <div style="width:250px;flex-shrink:0;background:#111827;"></div>
+
+  <div style="flex:1;padding:32px;display:flex;flex-direction:column;gap:24px;">
+
+    <div>
+      <div style="font-size:28px;font-weight:700;color:#111827;">Admin Panel</div>
+      <div style="font-size:14px;color:#64748b;margin-top:4px;">Kelola anggota tim dan pantau aktivitas</div>
+    </div>
+
+    <!-- User management -->
+    <div style="background:#ffffff;border-radius:12px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;">
+        <div style="font-size:16px;font-weight:600;color:#111827;">User Management</div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="text" placeholder="Cari email/nama..." style="height:36px;padding:0 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;width:220px;" />
+          <button style="height:36px;padding:0 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Tambah User
+          </button>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Join Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>siti.dewi@anara.com</td><td>Siti Dewi</td>
+            <td><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;background:#dbeafe;color:#1e40af;">Admin</span></td>
+            <td>12 Jan 2026</td>
+            <td><div style="display:flex;gap:8px;"><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;">✎</button><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;color:#ef4444;">✕</button></div></td>
+          </tr>
+          <tr>
+            <td>budi.santoso@anara.com</td><td>Budi Santoso</td>
+            <td><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;background:#f1f5f9;color:#475569;">CS</span></td>
+            <td>03 Feb 2026</td>
+            <td><div style="display:flex;gap:8px;"><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;">✎</button><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;color:#ef4444;">✕</button></div></td>
+          </tr>
+          <tr>
+            <td>rina.wijaya@anara.com</td><td>Rina Wijaya</td>
+            <td><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;background:#f1f5f9;color:#475569;">CS</span></td>
+            <td>18 Mar 2026</td>
+            <td><div style="display:flex;gap:8px;"><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;">✎</button><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;color:#ef4444;">✕</button></div></td>
+          </tr>
+          <tr>
+            <td>agus.pratama@anara.com</td><td>Agus Pratama</td>
+            <td><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;background:#f1f5f9;color:#475569;">CS</span></td>
+            <td>25 Apr 2026</td>
+            <td><div style="display:flex;gap:8px;"><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;">✎</button><button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;color:#ef4444;">✕</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="display:flex;justify-content:center;gap:8px;padding:16px 0;">
+        <button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#2563eb;color:#fff;border-radius:6px;font-size:12px;font-weight:600;">1</button>
+        <button style="width:28px;height:28px;border:1px solid #e5e7eb;background:#fff;color:#111827;border-radius:6px;font-size:12px;">2</button>
+      </div>
+    </div>
+
+    <!-- Activity log -->
+    <div style="background:#ffffff;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:16px;font-weight:600;color:#111827;">Team Activity Log</div>
+        <select style="height:32px;padding:0 28px 0 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#111827;background:#fff;">
+          <option>Semua Aktivitas</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0;">
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+          <div style="width:8px;height:8px;border-radius:4px;background:#10b981;margin-top:6px;flex-shrink:0;"></div>
+          <div style="font-size:14px;color:#111827;">Budi Santoso <span style="color:#64748b;">membuat reply baru</span> "Reschedule keberangkatan" <span style="color:#94a3b8;">· 2 jam lalu</span></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+          <div style="width:8px;height:8px;border-radius:4px;background:#f59e0b;margin-top:6px;flex-shrink:0;"></div>
+          <div style="font-size:14px;color:#111827;">Siti Dewi <span style="color:#64748b;">mengedit reply</span> "Harga paket Hongkong" <span style="color:#94a3b8;">· 5 jam lalu</span></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+          <div style="width:8px;height:8px;border-radius:4px;background:#ef4444;margin-top:6px;flex-shrink:0;"></div>
+          <div style="font-size:14px;color:#111827;">Siti Dewi <span style="color:#64748b;">menghapus reply</span> "Promo lama 2025" <span style="color:#94a3b8;">· 1 hari lalu</span></div>
+        </div>
+        <div style="display:flex;gap:12px;padding:12px 0;">
+          <div style="width:8px;height:8px;border-radius:4px;background:#10b981;margin-top:6px;flex-shrink:0;"></div>
+          <div style="font-size:14px;color:#111827;">Rina Wijaya <span style="color:#64748b;">membuat reply baru</span> "Visa Korea" <span style="color:#94a3b8;">· 2 hari lalu</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
