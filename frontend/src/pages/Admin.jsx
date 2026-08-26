@@ -250,25 +250,43 @@ function UsersTab({ currentUser }) {
         )}
       </div>
 
-      <div className="bg-surface rounded-xl p-6 flex flex-col gap-4 mt-6">
-        <div className="text-base font-semibold text-gray-dark">Team Activity Log</div>
-        <div className="flex flex-col">
-          {activity.length === 0 && <div className="text-sm text-secondary py-4">Belum ada aktivitas.</div>}
-          {activity.map((a, i) => (
-            <div key={a.id} className={`flex gap-3 py-3 ${i < activity.length - 1 ? 'border-b border-gray-med' : ''}`}>
-              <span
-                className="w-2 h-2 rounded-sm mt-1.5 shrink-0"
-                style={{ background: a.action === 'delete' ? '#ef4444' : a.action === 'update' ? '#f59e0b' : '#10b981' }}
-              />
-              <div className="text-sm text-gray-dark">
-                <span className="font-semibold">{a.user_name || 'Unknown'}</span>{' '}
-                {a.description}{' '}
-                <span className="text-secondary">
-                  · {a.user_email ? `${a.user_email} · ` : ''}{new Date(a.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-          ))}
+      <div className="bg-surface rounded-xl overflow-hidden mt-6">
+        <div className="text-base font-semibold text-gray-dark p-6 pb-4">Team Activity Log</div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                {['User', 'Aktivitas', 'Waktu'].map((h) => (
+                  <th key={h} className="text-xs font-semibold uppercase tracking-wide text-secondary text-left px-4 py-2.5 border-b border-gray-med">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {activity.length === 0 && (
+                <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Belum ada aktivitas.</td></tr>
+              )}
+              {activity.map((a) => (
+                <tr key={a.id}>
+                  <td className="px-4 py-3.5 border-b border-gray-med">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ background: a.action === 'delete' ? '#ef4444' : a.action === 'update' ? '#f59e0b' : '#10b981' }}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-dark truncate">{a.user_name || 'Unknown'}</div>
+                        <div className="text-xs text-secondary truncate">{a.user_email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{a.description}</td>
+                  <td className="text-sm text-secondary px-4 py-3.5 border-b border-gray-med whitespace-nowrap">
+                    {new Date(a.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
