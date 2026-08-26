@@ -245,7 +245,7 @@ export default function FollowUpKit() {
   }
 
   return (
-    <div className="p-8 flex flex-col gap-6 max-w-[820px]">
+    <div className="p-8 flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[28px] font-bold text-gray-dark">Follow-Up Kit</div>
@@ -278,15 +278,21 @@ export default function FollowUpKit() {
       </div>
 
       <div className="bg-surface border border-gray-med rounded-xl p-5">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-secondary mb-3">Alur waktu yang disarankan</div>
-        <div className="flex flex-wrap gap-x-6 gap-y-3 overflow-x-auto">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-secondary mb-4">Alur waktu yang disarankan</div>
+        <div className="grid gap-x-4 gap-y-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
           {CADENCE.map((c, i) => (
-            <div key={i} className="flex items-center gap-6">
-              <div>
-                <div className="text-[13px] font-semibold" style={{ color: '#2563eb' }}>{c.time}</div>
-                <div className="text-[13px] text-secondary mt-0.5">{c.what}</div>
+            <div key={i} className="flex flex-col gap-1.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                  style={{ background: '#dbeafe', color: '#1e40af' }}
+                >
+                  {i + 1}
+                </span>
+                <div className="h-px flex-1" style={{ background: 'var(--color-gray-med)' }} />
               </div>
-              {i < CADENCE.length - 1 && <span className="text-gray-med hidden sm:inline">→</span>}
+              <div className="text-[13px] font-semibold truncate" style={{ color: '#2563eb' }}>{c.time}</div>
+              <div className="text-[13px] text-secondary">{c.what}</div>
             </div>
           ))}
         </div>
