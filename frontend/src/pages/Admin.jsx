@@ -60,6 +60,8 @@ function UsersTab({ currentUser }) {
   const [deleting, setDeleting] = useState(false);
 
   const [activity, setActivity] = useState([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPagination, setActivityPagination] = useState({ page: 1, totalPages: 1 });
 
   const fetchUsers = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -82,13 +84,16 @@ function UsersTab({ currentUser }) {
   useAutoRefresh(() => fetchUsers(false), 15000, [search, page]);
 
   const fetchActivity = useCallback(() => {
-    api.get('/activity', { params: { limit: 15 } })
-      .then(({ data }) => setActivity(data.data))
+    api.get('/activity', { params: { page: activityPage, limit: 10 } })
+      .then(({ data }) => {
+        setActivity(data.data);
+        setActivityPagination(data.pagination);
+      })
       .catch(() => {});
-  }, []);
+  }, [activityPage]);
 
   useEffect(() => { fetchActivity(); }, [fetchActivity]);
-  useAutoRefresh(fetchActivity, 15000);
+  useAutoRefresh(fetchActivity, 15000, [activityPage]);
 
   async function handleRoleChange(u, role) {
     try {
@@ -288,6 +293,21 @@ function UsersTab({ currentUser }) {
             </tbody>
           </table>
         </div>
+
+        {activityPagination.totalPages > 1 && (
+          <div className="flex justify-center gap-2 py-4">
+            {Array.from({ length: activityPagination.totalPages }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setActivityPage(n)}
+                className="w-7 h-7 rounded-md text-xs font-semibold cursor-pointer"
+                style={n === activityPage ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {showInvite && (
