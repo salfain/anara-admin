@@ -8,9 +8,9 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-light">
+    <div className="h-screen w-full flex overflow-hidden bg-gray-light">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <button
           onClick={() => setSidebarOpen(true)}
           className="lg:hidden fixed top-4 left-4 z-20 w-10 h-10 rounded-lg bg-surface border border-gray-med flex items-center justify-center shadow-sm"

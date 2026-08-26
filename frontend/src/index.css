@@ -23,6 +23,14 @@
   --color-surface: #1e293b;
 }
 
+html, body, #root {
+  height: 100%;
+}
+
+html {
+  background: var(--color-gray-light);
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
