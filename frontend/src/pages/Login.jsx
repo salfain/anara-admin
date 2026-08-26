@@ -18,7 +18,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6" style={{ background: 'linear-gradient(180deg,#f9fafb 0%,#eef2f7 100%)' }}>
-      <div className="w-full max-w-[400px] bg-white border border-gray-med rounded-xl shadow-md px-8 py-10 flex flex-col gap-6">
+      <div className="w-full max-w-[400px] bg-surface border border-gray-med rounded-xl shadow-md px-8 py-10 flex flex-col gap-6">
         <div className="flex flex-col items-center gap-2">
           <div className="w-12 h-12 rounded-[10px] flex items-center justify-center" style={{ background: '#2563eb' }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

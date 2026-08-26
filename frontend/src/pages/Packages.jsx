@@ -127,12 +127,12 @@ export default function Packages() {
       <div className="flex flex-col gap-3">
         {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
         {!loading && files.length === 0 && (
-          <div className="text-center text-sm text-secondary py-16 bg-white rounded-xl border border-gray-med">
+          <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
             Belum ada file itinerary yang diupload.
           </div>
         )}
         {files.map((f) => (
-          <div key={f.id} className="bg-white border border-gray-med rounded-xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div key={f.id} className="bg-surface border border-gray-med rounded-xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-lg bg-blue-50 text-primary text-[11px] font-bold flex items-center justify-center shrink-0" style={{ background: '#eff6ff', color: '#2563eb' }}>
                 FILE
@@ -147,14 +147,14 @@ export default function Packages() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => handleView(f)}
-                className="h-8 px-3 bg-white text-gray-dark border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 bg-surface text-gray-dark border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
               >
                 <Eye size={13} />
                 Lihat
               </button>
               <button
                 onClick={() => handleDownload(f)}
-                className="h-8 px-3 bg-white border border-primary rounded-md text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 bg-surface border border-primary rounded-md text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
                 style={{ color: '#2563eb', borderColor: '#2563eb' }}
               >
                 <Download size={13} />
@@ -163,7 +163,7 @@ export default function Packages() {
               {isAdmin && (
                 <button
                   onClick={() => setDeleteTarget(f)}
-                  className="h-8 px-3 bg-white border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
+                  className="h-8 px-3 bg-surface border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
                   style={{ color: '#ef4444' }}
                 >
                   <Trash2 size={13} />
@@ -177,7 +177,7 @@ export default function Packages() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 bg-gray-dark/50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="w-full max-w-[500px] bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-4">
+          <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="w-full max-w-[500px] bg-surface rounded-xl shadow-2xl p-6 flex flex-col gap-4">
             <div className="text-lg font-semibold text-gray-dark">Tambah File</div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Nama (judul isi file) *</label>
@@ -199,7 +199,7 @@ export default function Packages() {
             </div>
             {error && <div className="text-xs text-red-600">{error}</div>}
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowModal(false)} className="h-9 px-4 bg-white text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              <button type="button" onClick={() => setShowModal(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
                 Cancel
               </button>
               <button type="submit" disabled={saving} className="h-9 px-4 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>

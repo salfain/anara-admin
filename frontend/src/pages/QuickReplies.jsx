@@ -124,7 +124,7 @@ export default function QuickReplies() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-med px-8 py-4 flex items-center gap-4">
+      <div className="sticky top-0 z-10 bg-surface border-b border-gray-med px-8 py-4 flex items-center gap-4">
         <div className="flex-1 relative max-w-[520px] ml-10 lg:ml-0">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
@@ -153,7 +153,7 @@ export default function QuickReplies() {
           </button>
         </div>
 
-        <div className="bg-white border border-gray-med rounded-xl p-4 px-6 flex items-center gap-4 flex-wrap">
+        <div className="bg-surface border border-gray-med rounded-xl p-4 px-6 flex items-center gap-4 flex-wrap">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-secondary">Category</label>
             <select
@@ -176,7 +176,7 @@ export default function QuickReplies() {
               {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
-          <button onClick={clearFilters} className="ml-auto h-9 px-4 bg-white text-secondary border border-gray-med rounded-lg text-[13px] font-semibold self-end cursor-pointer">
+          <button onClick={clearFilters} className="ml-auto h-9 px-4 bg-surface text-secondary border border-gray-med rounded-lg text-[13px] font-semibold self-end cursor-pointer">
             Clear filters
           </button>
         </div>
@@ -185,7 +185,7 @@ export default function QuickReplies() {
           <div className="text-sm text-gray-dark"><span className="font-semibold">{pagination.total}</span> replies ditemukan</div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-secondary">Sort:</label>
-            <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-8 px-2.5 border border-gray-med rounded-md text-[13px] bg-white">
+            <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-8 px-2.5 border border-gray-med rounded-md text-[13px] bg-surface">
               <option value="most_used">Most Used</option>
               <option value="recent">Recently Added</option>
               <option value="alphabetical">Alphabetical</option>
@@ -196,7 +196,7 @@ export default function QuickReplies() {
         <div className="flex flex-col gap-4">
           {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
           {!loading && replies.length === 0 && (
-            <div className="text-center text-sm text-secondary py-16 bg-white rounded-xl border border-gray-med">
+            <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
               Belum ada quick reply yang cocok. Coba ubah pencarian atau filter.
             </div>
           )}
@@ -217,7 +217,7 @@ export default function QuickReplies() {
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="w-8 h-8 border border-gray-med bg-white rounded-md text-secondary disabled:opacity-40 cursor-pointer"
+              className="w-8 h-8 border border-gray-med bg-surface rounded-md text-secondary disabled:opacity-40 cursor-pointer"
             >
               ‹
             </button>
@@ -226,7 +226,7 @@ export default function QuickReplies() {
                 key={n}
                 onClick={() => setPage(n)}
                 className="w-8 h-8 rounded-md text-[13px] font-semibold cursor-pointer"
-                style={n === page ? { background: '#2563eb', color: '#fff', border: 'none' } : { background: '#fff', color: '#111827', border: '1px solid #e5e7eb' }}
+                style={n === page ? { background: '#2563eb', color: '#fff', border: 'none' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
               >
                 {n}
               </button>
@@ -234,7 +234,7 @@ export default function QuickReplies() {
             <button
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="w-8 h-8 border border-gray-med bg-white rounded-md text-secondary disabled:opacity-40 cursor-pointer"
+              className="w-8 h-8 border border-gray-med bg-surface rounded-md text-secondary disabled:opacity-40 cursor-pointer"
             >
               ›
             </button>

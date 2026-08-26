@@ -22,7 +22,7 @@ export default function Admin() {
         <div className="text-sm text-secondary mt-1">Kelola anggota tim, kategori, paket, dan pantau aktivitas</div>
       </div>
 
-      <div className="flex gap-1 bg-white rounded-xl p-1.5 w-fit border border-gray-med">
+      <div className="flex gap-1 bg-surface rounded-xl p-1.5 w-fit border border-gray-med">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -129,7 +129,7 @@ function UsersTab({ currentUser }) {
 
   return (
     <>
-      <div className="bg-white rounded-xl overflow-hidden">
+      <div className="bg-surface rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-6 flex-wrap gap-3">
           <div className="text-base font-semibold text-gray-dark">User Management</div>
           <div className="flex gap-3 items-center">
@@ -188,7 +188,7 @@ function UsersTab({ currentUser }) {
                       <button
                         onClick={() => setDeleteTarget(u)}
                         disabled={u.id === currentUser?.id}
-                        className="w-7 h-7 border border-gray-med bg-white rounded-md flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        className="w-7 h-7 border border-gray-med bg-surface rounded-md flex items-center justify-center disabled:opacity-30 cursor-pointer"
                         style={{ color: '#ef4444' }}
                       >
                         <Trash2 size={13} />
@@ -211,7 +211,7 @@ function UsersTab({ currentUser }) {
                 key={n}
                 onClick={() => setPage(n)}
                 className="w-7 h-7 rounded-md text-xs font-semibold cursor-pointer"
-                style={n === page ? { background: '#2563eb', color: '#fff' } : { background: '#fff', color: '#111827', border: '1px solid #e5e7eb' }}
+                style={n === page ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
               >
                 {n}
               </button>
@@ -220,7 +220,7 @@ function UsersTab({ currentUser }) {
         )}
       </div>
 
-      <div className="bg-white rounded-xl p-6 flex flex-col gap-4 mt-6">
+      <div className="bg-surface rounded-xl p-6 flex flex-col gap-4 mt-6">
         <div className="text-base font-semibold text-gray-dark">Team Activity Log</div>
         <div className="flex flex-col">
           {activity.length === 0 && <div className="text-sm text-secondary py-4">Belum ada aktivitas.</div>}
@@ -243,7 +243,7 @@ function UsersTab({ currentUser }) {
           <form
             onSubmit={handleInvite}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[420px] bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-4"
+            className="w-full max-w-[420px] bg-surface rounded-xl shadow-2xl p-6 flex flex-col gap-4"
           >
             <div className="text-lg font-semibold text-gray-dark">Tambah User</div>
             <div className="flex flex-col gap-1.5">
@@ -282,14 +282,14 @@ function UsersTab({ currentUser }) {
               <select
                 value={inviteForm.role}
                 onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
-                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-white"
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface"
               >
                 <option value="cs">CS</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 bg-white text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
                 Cancel
               </button>
               <button type="submit" disabled={inviting} className="h-9 px-4 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
@@ -369,7 +369,7 @@ function CategoriesTab() {
 
   return (
     <div className="flex gap-6 flex-wrap items-start">
-      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-white border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
         <div className="text-base font-semibold text-gray-dark">Add Category</div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Category name *</label>
@@ -386,7 +386,7 @@ function CategoriesTab() {
         </button>
       </form>
 
-      <div className="flex-1 min-w-[280px] bg-white border border-gray-med rounded-xl overflow-hidden">
+      <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr>
@@ -484,7 +484,7 @@ function PackagesTab() {
 
   return (
     <div className="flex gap-6 flex-wrap items-start">
-      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-white border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
         <div className="text-base font-semibold text-gray-dark">Add Package</div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Package name *</label>
@@ -501,7 +501,7 @@ function PackagesTab() {
         </button>
       </form>
 
-      <div className="flex-1 min-w-[280px] bg-white border border-gray-med rounded-xl overflow-hidden">
+      <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr>

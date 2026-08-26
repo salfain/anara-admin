@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MessagesSquare, BarChart3, Users, LogOut, MessageSquare, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, BarChart3, Users, LogOut, MessageSquare, FolderOpen, Sun, Moon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import useThemeStore from '../store/themeStore';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const initials = (user?.name || '?')
     .split(' ')
     .map((p) => p[0])
@@ -28,19 +30,19 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
       <div
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-[250px] shrink-0 bg-gray-dark text-white flex flex-col gap-8 p-4 transition-transform duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-[250px] shrink-0 text-white flex flex-col h-full transition-transform duration-200 ${
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
         style={{ background: '#111827' }}
       >
-        <div className="flex items-center gap-2.5 px-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0" style={{ background: '#2563eb' }}>
+        <div className="flex items-center gap-2.5 px-4 pt-4 pb-2 shrink-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#2563eb' }}>
             <MessageSquare size={18} color="#fff" />
           </div>
           <div className="text-base font-semibold">Anara</div>
         </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 px-4 py-2">
           {navItems.map((item) => {
             if (item.adminOnly && user?.role !== 'admin') return null;
             const Icon = item.icon;
@@ -51,7 +53,7 @@ export default function Sidebar({ open, onClose }) {
                 end={item.end}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                     isActive ? 'text-white' : 'text-slate-300 hover:bg-white/5'
                   }`
                 }
@@ -64,8 +66,8 @@ export default function Sidebar({ open, onClose }) {
           })}
         </nav>
 
-        <div className="mt-auto flex flex-col gap-1 border-t border-white/10 pt-4">
-          <div className="flex items-center gap-2.5 px-3 py-2">
+        <div className="shrink-0 flex flex-col gap-1 border-t border-white/10 px-4 pt-3 pb-4">
+          <div className="flex items-center gap-2.5 px-1 py-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0"
               style={{ background: '#2563eb' }}
@@ -77,9 +79,32 @@ export default function Sidebar({ open, onClose }) {
               <div className="text-[11px] text-slate-400 capitalize">{user?.role === 'admin' ? 'Admin' : 'CS Team'}</div>
             </div>
           </div>
+
+          <div className="flex gap-1 bg-white/5 rounded-lg p-1 mb-1">
+            <button
+              onClick={() => theme !== 'light' && toggleTheme()}
+              className="flex-1 h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              style={theme === 'light' ? { background: 'rgba(255,255,255,0.18)', color: '#fff' } : { color: '#94a3b8' }}
+            >
+              <Sun size={14} />
+              Terang
+            </button>
+            <button
+              onClick={() => theme !== 'dark' && toggleTheme()}
+              className="flex-1 h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              style={theme === 'dark' ? { background: 'rgba(255,255,255,0.18)', color: '#fff' } : { color: '#94a3b8' }}
+            >
+              <Moon size={14} />
+              Gelap
+            </button>
+          </div>
+
           <button
             onClick={logout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-white/5 cursor-pointer text-left"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer text-left"
+            style={{ color: '#f87171' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239,68,68,0.15)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <LogOut size={18} />
             Logout

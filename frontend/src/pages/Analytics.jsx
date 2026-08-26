@@ -57,7 +57,7 @@ export default function Analytics() {
               key={p.key}
               onClick={() => setPreset(p.key)}
               className="h-9 px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer"
-              style={preset === p.key ? { background: '#2563eb', color: '#fff' } : { background: '#fff', color: '#111827', border: '1px solid #e5e7eb' }}
+              style={preset === p.key ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
             >
               {p.label}
             </button>
@@ -73,7 +73,7 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        <div className="bg-white rounded-xl p-6 flex flex-col gap-4">
+        <div className="bg-surface rounded-xl p-6 flex flex-col gap-4">
           <div className="text-base font-semibold text-gray-dark">Top 10 Pertanyaan</div>
           {loading ? (
             <div className="text-sm text-secondary">Memuat...</div>
@@ -99,7 +99,7 @@ export default function Analytics() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl p-6 flex flex-col gap-4">
+        <div className="bg-surface rounded-xl p-6 flex flex-col gap-4">
           <div className="text-base font-semibold text-gray-dark">Distribusi Kategori</div>
           {loading ? (
             <div className="text-sm text-secondary">Memuat...</div>
@@ -133,7 +133,7 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl overflow-hidden">
+      <div className="bg-surface rounded-xl overflow-hidden">
         <div className="px-6 pt-5 text-base font-semibold text-gray-dark">Category Breakdown</div>
         <div className="overflow-x-auto mt-3">
           <table className="w-full border-collapse">
@@ -165,7 +165,7 @@ export default function Analytics() {
 
 function MetricCard({ label, value }) {
   return (
-    <div className="bg-white rounded-xl p-6 flex flex-col gap-2 transition-shadow hover:shadow-lg">
+    <div className="bg-surface rounded-xl p-6 flex flex-col gap-2 transition-shadow hover:shadow-lg">
       <div className="text-xs font-semibold uppercase tracking-wide text-secondary">{label}</div>
       <div className="text-[32px] font-bold text-gray-dark">{value}</div>
     </div>

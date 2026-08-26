@@ -2,7 +2,7 @@ import { Copy, Pencil, Trash2 } from 'lucide-react';
 
 export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete }) {
   return (
-    <div className="bg-white border border-gray-med rounded-xl p-6 flex flex-col gap-3 transition-shadow hover:shadow-lg hover:-translate-y-0.5 duration-150">
+    <div className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-3 transition-shadow hover:shadow-lg hover:-translate-y-0.5 duration-150">
       <div className="flex justify-between items-start gap-4">
         <div className="text-base font-semibold text-gray-dark">{reply.question}</div>
         <div className="flex gap-2 shrink-0">
@@ -16,14 +16,14 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete }) 
           </button>
           <button
             onClick={() => onEdit(reply)}
-            className="w-8 h-8 bg-white text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
           >
             <Pencil size={14} />
           </button>
           {isAdmin && (
             <button
               onClick={() => onDelete(reply)}
-              className="w-8 h-8 bg-white text-danger border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
+              className="w-8 h-8 bg-surface text-danger border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
               style={{ color: '#ef4444' }}
             >
               <Trash2 size={14} />

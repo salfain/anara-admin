@@ -44,7 +44,7 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
   return (
     <div className="fixed inset-0 z-50 bg-gray-dark/50 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="w-full max-w-[600px] max-h-[85vh] overflow-auto bg-white rounded-xl shadow-2xl flex flex-col"
+        className="w-full max-w-[600px] max-h-[85vh] overflow-auto bg-surface rounded-xl shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-med">
@@ -92,7 +92,7 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
               <select
                 value={form.package_id}
                 onChange={(e) => setForm({ ...form, package_id: e.target.value })}
-                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
                 <option value="">Pilih paket...</option>
                 {packages.map((p) => (
@@ -105,7 +105,7 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
                 <option value="">Pilih kategori...</option>
                 {categories.map((c) => (
@@ -130,7 +130,7 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
             <button
               type="button"
               onClick={onClose}
-              className="h-10 px-5 bg-white text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer"
+              className="h-10 px-5 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer"
             >
               Cancel
             </button>

@@ -32,10 +32,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading && Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white border border-gray-med rounded-xl p-6 h-[92px] animate-pulse" />
+          <div key={i} className="bg-surface border border-gray-med rounded-xl p-6 h-[92px] animate-pulse" />
         ))}
         {!loading && metrics.map((m) => (
-          <div key={m.label} className="bg-white border border-gray-med rounded-xl p-6 flex flex-col gap-1.5 transition-shadow hover:shadow-lg">
+          <div key={m.label} className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-1.5 transition-shadow hover:shadow-lg">
             <div className="text-2xl font-bold" style={{ color: '#2563eb' }}>{m.value}</div>
             <div className="text-[13px] text-secondary">{m.label}</div>
           </div>
@@ -53,14 +53,14 @@ export default function Dashboard() {
         {user?.role === 'admin' && (
           <Link
             to="/analytics"
-            className="h-10 px-4 bg-white text-gray-dark border border-gray-med rounded-lg text-[13px] font-semibold flex items-center cursor-pointer"
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-[13px] font-semibold flex items-center cursor-pointer"
           >
             Lihat Analytics
           </Link>
         )}
       </div>
 
-      <div className="bg-white border border-gray-med rounded-xl overflow-hidden">
+      <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-med">
           <div className="text-base font-semibold text-gray-dark">Balasan Paling Sering Digunakan</div>
           <Link to="/quick-replies" className="text-[13px] font-semibold" style={{ color: '#2563eb' }}>Lihat semua</Link>
