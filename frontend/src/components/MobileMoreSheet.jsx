@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { LogOut, Sun, Moon, X } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
+import InstallPwaButton from './InstallPwaButton';
 
 export default function MobileMoreSheet({ open, onClose, overflowItems }) {
   const { user, logout } = useAuthStore();
@@ -86,6 +87,8 @@ export default function MobileMoreSheet({ open, onClose, overflowItems }) {
               Gelap
             </button>
           </div>
+
+          <InstallPwaButton className="py-3" />
 
           <button
             onClick={logout}

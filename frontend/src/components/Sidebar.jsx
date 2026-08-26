@@ -3,6 +3,7 @@ import { LogOut, MessageSquare, Sun, Moon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
 import { navItems } from '../data/navItems';
+import InstallPwaButton from './InstallPwaButton';
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
@@ -78,6 +79,8 @@ export default function Sidebar() {
             Gelap
           </button>
         </div>
+
+        <InstallPwaButton />
 
         <button
           onClick={logout}
