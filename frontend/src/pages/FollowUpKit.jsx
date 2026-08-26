@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react';
-import { Search, Copy, Check } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Search, Copy, Check, Plus, Pencil, Trash2 } from 'lucide-react';
+import api from '../api/client';
+import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
-import { CADENCE, FOLLOWUP_TEMPLATES } from '../data/followUpTemplates';
+import useAutoRefresh from '../hooks/useAutoRefresh';
+import FollowUpTemplateModal from '../components/FollowUpTemplateModal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { CADENCE } from '../data/followUpTemplates';
 
 function highlight(text) {
   const parts = text.split(/(\[[^\]]+\])/g);
@@ -50,7 +55,7 @@ function CopyButton({ text, small }) {
   );
 }
 
-function TemplateCard({ template }) {
+function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
   const [variantIndex, setVariantIndex] = useState(0);
 
   return (
@@ -69,20 +74,32 @@ function TemplateCard({ template }) {
       <div className="flex-1 p-5 min-w-0">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1.5">
           <div className="text-lg font-semibold text-gray-dark">{template.title}</div>
-          {template.tag && (
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
-              style={{ background: '#fef2f2', color: '#dc2626' }}
-            >
-              {template.tag}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {template.tag && (
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
+                style={{ background: '#fef2f2', color: '#dc2626' }}
+              >
+                {template.tag}
+              </span>
+            )}
+            {isAdmin && (
+              <div className="flex gap-1.5">
+                <button onClick={() => onEdit(template)} className="w-7 h-7 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer">
+                  <Pencil size={12} />
+                </button>
+                <button onClick={() => onDelete(template)} className="w-7 h-7 bg-surface border border-gray-med rounded-md flex items-center justify-center cursor-pointer" style={{ color: '#ef4444' }}>
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-[13px] text-secondary mb-4">{template.useWhen}</div>
 
-        {template.steps && (
+        {template.kind === 'steps' && (
           <div className="flex flex-col gap-3">
-            {template.steps.map((step, i) => (
+            {(template.steps || []).map((step, i) => (
               <div key={i} className="flex gap-3 items-start">
                 <div
                   className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 mt-3.5"
@@ -101,12 +118,12 @@ function TemplateCard({ template }) {
           </div>
         )}
 
-        {template.variants && (
+        {template.kind === 'variants' && (
           <>
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {template.variants.map((v, vi) => (
+              {(template.variants || []).map((v, vi) => (
                 <button
-                  key={v.label}
+                  key={v.label + vi}
                   onClick={() => setVariantIndex(vi)}
                   className="text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer"
                   style={vi === variantIndex ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-gray-light)', color: 'var(--color-secondary)', border: '1px solid var(--color-gray-med)' }}
@@ -115,19 +132,23 @@ function TemplateCard({ template }) {
                 </button>
               ))}
             </div>
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
-              {highlight(template.variants[variantIndex].text)}
-            </pre>
-            <CopyButton text={template.variants[variantIndex].text} />
+            {template.variants?.[variantIndex] && (
+              <>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
+                  {highlight(template.variants[variantIndex].text)}
+                </pre>
+                <CopyButton text={template.variants[variantIndex].text} />
+              </>
+            )}
           </>
         )}
 
-        {template.text && !template.steps && !template.variants && (
+        {template.kind === 'text' && (
           <>
             <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed bg-gray-light border border-gray-med rounded-lg px-3.5 py-3 mb-3">
-              {highlight(template.text)}
+              {highlight(template.text || '')}
             </pre>
-            <CopyButton text={template.text} />
+            <CopyButton text={template.text || ''} />
           </>
         )}
       </div>
@@ -136,21 +157,113 @@ function TemplateCard({ template }) {
 }
 
 export default function FollowUpKit() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
+  const push = useToastStore((s) => s.push);
+
   const [search, setSearch] = useState('');
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchTemplates = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const { data } = await api.get('/followup-templates');
+      setTemplates(data.data);
+    } catch {
+      push('Gagal memuat template', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
+
+  useEffect(() => { fetchTemplates(true); }, [fetchTemplates]);
+  useAutoRefresh(() => fetchTemplates(false), 15000);
 
   const filtered = useMemo(
-    () => FOLLOWUP_TEMPLATES.filter((t) => matches(t, search)),
-    [search]
+    () => templates.filter((t) => matches(t, search)),
+    [templates, search]
   );
+
+  function openAdd() {
+    setEditing(null);
+    setModalOpen(true);
+  }
+  function openEdit(t) {
+    setEditing(t);
+    setModalOpen(true);
+  }
+
+  async function handleSubmit(form) {
+    setSaving(true);
+    try {
+      const payload = {
+        no: form.no.trim(),
+        code: form.code.trim(),
+        when: form.when.trim() || null,
+        title: form.title.trim(),
+        useWhen: form.useWhen.trim() || null,
+        tag: form.tag.trim() || null,
+        kind: form.kind,
+        text: form.kind === 'text' ? form.text : undefined,
+        steps: form.kind === 'steps' ? form.steps : undefined,
+        variants: form.kind === 'variants' ? form.variants : undefined,
+      };
+      if (editing) {
+        await api.put(`/followup-templates/${editing.id}`, payload);
+        push('Template berhasil diperbarui');
+      } else {
+        await api.post('/followup-templates', payload);
+        push('Template berhasil ditambahkan');
+      }
+      setModalOpen(false);
+      fetchTemplates(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menyimpan template', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.delete(`/followup-templates/${deleteTarget.id}`);
+      push('Template dihapus');
+      setDeleteTarget(null);
+      fetchTemplates(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menghapus template', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="p-8 flex flex-col gap-6 max-w-[820px]">
-      <div>
-        <div className="text-[28px] font-bold text-gray-dark">Follow-Up Kit</div>
-        <div className="text-sm text-secondary mt-1">
-          Script dan pesan WhatsApp siap pakai untuk menangani calon peserta — dari sapaan pertama sampai closing.
-          Ganti bagian bertanda <span style={{ color: '#2563eb', fontWeight: 600 }}>[dalam kurung]</span> sebelum dikirim.
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[28px] font-bold text-gray-dark">Follow-Up Kit</div>
+          <div className="text-sm text-secondary mt-1 max-w-[560px]">
+            Script dan pesan WhatsApp siap pakai untuk menangani calon peserta — dari sapaan pertama sampai closing.
+            Ganti bagian bertanda <span style={{ color: '#2563eb', fontWeight: 600 }}>[dalam kurung]</span> sebelum dikirim.
+          </div>
         </div>
+        {isAdmin && (
+          <button
+            onClick={openAdd}
+            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+            style={{ background: '#2563eb' }}
+          >
+            <Plus size={16} />
+            Tambah Template
+          </button>
+        )}
       </div>
 
       <div className="relative">
@@ -180,13 +293,14 @@ export default function FollowUpKit() {
       </div>
 
       <div className="flex flex-col gap-5">
-        {filtered.length === 0 && (
+        {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
+        {!loading && filtered.length === 0 && (
           <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
-            Tidak ada template yang cocok dengan &ldquo;{search}&rdquo;.
+            {search ? `Tidak ada template yang cocok dengan "${search}".` : 'Belum ada template.'}
           </div>
         )}
-        {filtered.map((t) => (
-          <TemplateCard key={t.no} template={t} />
+        {!loading && filtered.map((t) => (
+          <TemplateCard key={t.id} template={t} isAdmin={isAdmin} onEdit={openEdit} onDelete={setDeleteTarget} />
         ))}
       </div>
 
@@ -199,6 +313,23 @@ export default function FollowUpKit() {
           <li><strong className="text-gray-dark">Hormati kalau sudah menolak.</strong> Hentikan follow-up rutin kalau lead sudah bilang tidak lanjut.</li>
         </ul>
       </div>
+
+      <FollowUpTemplateModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleSubmit}
+        initial={editing}
+        saving={saving}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus Template?"
+        message={`Template "${deleteTarget?.title}" akan dihapus permanen.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deleting}
+      />
     </div>
   );
 }

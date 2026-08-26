@@ -1,6 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const pool = require('./pool');
+const followupSeedData = require('./followupSeedData');
 
 async function seed() {
   const client = await pool.connect();
@@ -56,6 +57,25 @@ async function seed() {
         adminId,
       ]
     );
+
+    const followupCount = await client.query('SELECT COUNT(*) FROM followup_templates');
+    if (parseInt(followupCount.rows[0].count, 10) === 0) {
+      for (let i = 0; i < followupSeedData.length; i++) {
+        const t = followupSeedData[i];
+        await client.query(
+          `INSERT INTO followup_templates (no, code, when_label, title, use_when, tag, kind, text, steps, variants, sort_order, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            t.no, t.code, t.when || null, t.title, t.useWhen || null, t.tag || null, t.kind,
+            t.kind === 'text' ? t.text : null,
+            t.kind === 'steps' ? JSON.stringify(t.steps) : null,
+            t.kind === 'variants' ? JSON.stringify(t.variants) : null,
+            i,
+            adminId,
+          ]
+        );
+      }
+    }
 
     await client.query('COMMIT');
     console.log('Seed completed. Admin login: admin@anara.com / Admin12345');

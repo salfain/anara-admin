@@ -8,6 +8,7 @@ const analyticsRoutes = require('./routes/analytics');
 const usersRoutes = require('./routes/users');
 const categoriesRoutes = require('./routes/categories');
 const packageFilesRoutes = require('./routes/packageFiles');
+const followupTemplatesRoutes = require('./routes/followupTemplates');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/package-files', packageFilesRoutes);
+app.use('/api/followup-templates', followupTemplatesRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

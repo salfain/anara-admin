@@ -73,6 +73,26 @@ CREATE TABLE IF NOT EXISTS package_files (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS followup_templates (
+  id SERIAL PRIMARY KEY,
+  no VARCHAR(10) NOT NULL,
+  code VARCHAR(50) NOT NULL,
+  when_label VARCHAR(100),
+  title VARCHAR(255) NOT NULL,
+  use_when TEXT,
+  tag VARCHAR(50),
+  kind VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (kind IN ('text', 'steps', 'variants')),
+  text TEXT,
+  steps JSONB,
+  variants JSONB,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_followup_templates_sort ON followup_templates(sort_order);
+
 CREATE INDEX IF NOT EXISTS idx_quick_replies_category ON quick_replies(category);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_package_id ON quick_replies(package_id);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_tags ON quick_replies(tags);
