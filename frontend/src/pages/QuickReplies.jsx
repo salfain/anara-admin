@@ -7,6 +7,7 @@ import ReplyCard from '../components/ReplyCard';
 import ReplyModal from '../components/ReplyModal';
 import ReplyDetailModal from '../components/ReplyDetailModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function QuickReplies() {
   const { user } = useAuthStore();
@@ -62,6 +63,8 @@ export default function QuickReplies() {
     const timer = setTimeout(fetchReplies, 300);
     return () => clearTimeout(timer);
   }, [fetchReplies]);
+
+  useAutoRefresh(fetchReplies, 15000, [search, category, packageId, sort, page]);
 
   function clearFilters() {
     setSearch('');

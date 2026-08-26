@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import useAuthStore from '../store/authStore';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.get('/quick-replies/stats')
+  const fetchStats = useCallback((showLoading = true) => {
+    if (showLoading) setLoading(true);
+    return api.get('/quick-replies/stats')
       .then(({ data }) => setStats(data.data))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchStats(true); }, [fetchStats]);
+  useAutoRefresh(() => fetchStats(false), 15000);
 
   const metrics = stats
     ? [

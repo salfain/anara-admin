@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import api from '../api/client';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const TABS = [
   { key: 'users', label: 'Users' },
@@ -60,8 +61,8 @@ function UsersTab({ currentUser }) {
 
   const [activity, setActivity] = useState([]);
 
-  async function fetchUsers() {
-    setLoading(true);
+  const fetchUsers = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await api.get('/users', { params: { search: search || undefined, page, limit: 10 } });
       setUsers(data.data);
@@ -71,21 +72,24 @@ function UsersTab({ currentUser }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [search, page, push]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchUsers, 300);
+    const timer = setTimeout(() => fetchUsers(true), 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, page]);
+  }, [fetchUsers]);
 
-  useEffect(() => {
-    if (currentUser) {
-      api.get(`/users/${currentUser.id}/activity`, { params: { limit: 8 } })
-        .then(({ data }) => setActivity(data.data))
-        .catch(() => {});
-    }
+  useAutoRefresh(() => fetchUsers(false), 15000, [search, page]);
+
+  const fetchActivity = useCallback(() => {
+    if (!currentUser) return;
+    api.get(`/users/${currentUser.id}/activity`, { params: { limit: 8 } })
+      .then(({ data }) => setActivity(data.data))
+      .catch(() => {});
   }, [currentUser]);
+
+  useEffect(() => { fetchActivity(); }, [fetchActivity]);
+  useAutoRefresh(fetchActivity, 15000, [currentUser]);
 
   async function handleRoleChange(u, role) {
     try {
@@ -322,8 +326,8 @@ function CategoriesTab() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function fetchCategories() {
-    setLoading(true);
+  const fetchCategories = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await api.get('/categories');
       setCategories(data.data);
@@ -332,9 +336,10 @@ function CategoriesTab() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [push]);
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(true); }, [fetchCategories]);
+  useAutoRefresh(() => fetchCategories(false), 15000);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -437,8 +442,8 @@ function PackagesTab() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function fetchPackages() {
-    setLoading(true);
+  const fetchPackages = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await api.get('/packages');
       setPackages(data.data);
@@ -447,9 +452,10 @@ function PackagesTab() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [push]);
 
-  useEffect(() => { fetchPackages(); }, []);
+  useEffect(() => { fetchPackages(true); }, [fetchPackages]);
+  useAutoRefresh(() => fetchPackages(false), 15000);
 
   async function handleAdd(e) {
     e.preventDefault();

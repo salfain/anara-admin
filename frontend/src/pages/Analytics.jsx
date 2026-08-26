@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../api/client';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const PIE_COLORS = ['#2563eb', '#60a5fa', '#f59e0b', '#10b981', '#a78bfa', '#f87171'];
 
@@ -26,10 +27,10 @@ export default function Analytics() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = useCallback((showLoading = true) => {
     const range = getRange(preset);
-    setLoading(true);
-    Promise.all([
+    if (showLoading) setLoading(true);
+    return Promise.all([
       api.get('/analytics/summary'),
       api.get('/analytics/top-questions', { params: { ...range, limit: 10 } }),
       api.get('/analytics/categories', { params: range }),
@@ -41,6 +42,9 @@ export default function Analytics() {
       })
       .finally(() => setLoading(false));
   }, [preset]);
+
+  useEffect(() => { fetchData(true); }, [fetchData]);
+  useAutoRefresh(() => fetchData(false), 15000, [preset]);
 
   const maxUsage = Math.max(...topQuestions.map((q) => q.usage_count), 1);
 

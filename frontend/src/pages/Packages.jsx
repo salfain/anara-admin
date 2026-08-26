@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Upload, Eye, Download, Trash2 } from 'lucide-react';
 import api from '../api/client';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function Packages() {
   const { user } = useAuthStore();
@@ -20,8 +21,8 @@ export default function Packages() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function fetchFiles() {
-    setLoading(true);
+  const fetchFiles = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await api.get('/package-files');
       setFiles(data.data);
@@ -30,11 +31,10 @@ export default function Packages() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [push]);
 
-  useEffect(() => {
-    fetchFiles();
-  }, []);
+  useEffect(() => { fetchFiles(true); }, [fetchFiles]);
+  useAutoRefresh(() => fetchFiles(false), 15000);
 
   function openModal() {
     setName('');
