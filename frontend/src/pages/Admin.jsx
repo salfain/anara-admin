@@ -82,14 +82,13 @@ function UsersTab({ currentUser }) {
   useAutoRefresh(() => fetchUsers(false), 15000, [search, page]);
 
   const fetchActivity = useCallback(() => {
-    if (!currentUser) return;
-    api.get(`/users/${currentUser.id}/activity`, { params: { limit: 8 } })
+    api.get('/activity', { params: { limit: 15 } })
       .then(({ data }) => setActivity(data.data))
       .catch(() => {});
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => { fetchActivity(); }, [fetchActivity]);
-  useAutoRefresh(fetchActivity, 15000, [currentUser]);
+  useAutoRefresh(fetchActivity, 15000);
 
   async function handleRoleChange(u, role) {
     try {
@@ -262,7 +261,11 @@ function UsersTab({ currentUser }) {
                 style={{ background: a.action === 'delete' ? '#ef4444' : a.action === 'update' ? '#f59e0b' : '#10b981' }}
               />
               <div className="text-sm text-gray-dark">
-                {a.description} <span className="text-secondary">· {new Date(a.created_at).toLocaleString('id-ID')}</span>
+                <span className="font-semibold">{a.user_name || 'Unknown'}</span>{' '}
+                {a.description}{' '}
+                <span className="text-secondary">
+                  · {a.user_email ? `${a.user_email} · ` : ''}{new Date(a.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           ))}

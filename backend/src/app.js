@@ -9,6 +9,7 @@ const usersRoutes = require('./routes/users');
 const categoriesRoutes = require('./routes/categories');
 const packageFilesRoutes = require('./routes/packageFiles');
 const followupTemplatesRoutes = require('./routes/followupTemplates');
+const activityRoutes = require('./routes/activity');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/package-files', packageFilesRoutes);
 app.use('/api/followup-templates', followupTemplatesRoutes);
+app.use('/api/activity', activityRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
