@@ -101,6 +101,16 @@ function UsersTab({ currentUser }) {
     }
   }
 
+  async function handleApprove(u) {
+    try {
+      await api.put(`/users/${u.id}/approve`);
+      push(`Akun "${u.email}" disetujui`);
+      fetchUsers();
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menyetujui akun', 'error');
+    }
+  }
+
   async function handleInvite(e) {
     e.preventDefault();
     setInviting(true);
@@ -159,14 +169,14 @@ function UsersTab({ currentUser }) {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                {['Email', 'Name', 'Role', 'Join Date', 'Actions'].map((h) => (
+                {['Email', 'Name', 'Role', 'Status', 'Join Date', 'Actions'].map((h) => (
                   <th key={h} className="text-xs font-semibold uppercase tracking-wide text-secondary text-left px-4 py-2.5 border-b border-gray-med">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={5} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>
+                <tr><td colSpan={6} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>
               )}
               {!loading && users.map((u) => (
                 <tr key={u.id}>
@@ -184,11 +194,28 @@ function UsersTab({ currentUser }) {
                       <option value="admin">Admin</option>
                     </select>
                   </td>
+                  <td className="px-4 py-3.5 border-b border-gray-med">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      style={u.status === 'pending' ? { background: '#fef3c7', color: '#b45309' } : { background: '#dcfce7', color: '#16a34a' }}
+                    >
+                      {u.status === 'pending' ? 'Pending' : 'Active'}
+                    </span>
+                  </td>
                   <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">
                     {new Date(u.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
                   <td className="px-4 py-3.5 border-b border-gray-med">
                     <div className="flex gap-2">
+                      {u.status === 'pending' && (
+                        <button
+                          onClick={() => handleApprove(u)}
+                          className="h-7 px-2.5 border border-gray-med bg-surface rounded-md text-xs font-semibold cursor-pointer"
+                          style={{ color: '#16a34a' }}
+                        >
+                          Approve
+                        </button>
+                      )}
                       <button
                         onClick={() => setDeleteTarget(u)}
                         disabled={u.id === currentUser?.id}
@@ -202,7 +229,7 @@ function UsersTab({ currentUser }) {
                 </tr>
               ))}
               {!loading && users.length === 0 && (
-                <tr><td colSpan={5} className="text-sm text-secondary text-center py-8">Tidak ada user ditemukan.</td></tr>
+                <tr><td colSpan={6} className="text-sm text-secondary text-center py-8">Tidak ada user ditemukan.</td></tr>
               )}
             </tbody>
           </table>

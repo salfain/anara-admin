@@ -8,9 +8,12 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   google_id VARCHAR(255) UNIQUE,
   role VARCHAR(20) NOT NULL DEFAULT 'cs' CHECK (role IN ('cs', 'admin')),
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active')),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
 
 CREATE TABLE IF NOT EXISTS packages (
   id SERIAL PRIMARY KEY,

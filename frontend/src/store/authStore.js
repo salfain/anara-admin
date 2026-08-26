@@ -25,13 +25,11 @@ const useAuthStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const { data } = await api.post('/auth/signup', { email, password, name });
-      localStorage.setItem('anara_token', data.token);
-      localStorage.setItem('anara_user', JSON.stringify(data.user));
-      set({ user: data.user, token: data.token, loading: false });
-      return true;
+      set({ loading: false });
+      return { ok: true, pending: Boolean(data.pending), message: data.message };
     } catch (err) {
       set({ error: err.response?.data?.error || 'Signup gagal', loading: false });
-      return false;
+      return { ok: false };
     }
   },
 

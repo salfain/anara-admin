@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/', authenticate, requireAdmin, controller.list);
 router.post('/', authenticate, requireAdmin, controller.invite);
 router.put('/:id/role', authenticate, requireAdmin, controller.updateRole);
+router.put('/:id/approve', authenticate, requireAdmin, controller.approve);
 router.delete('/:id', authenticate, requireAdmin, controller.remove);
 router.get('/:id/activity', authenticate, requireAdmin, controller.activity);
 

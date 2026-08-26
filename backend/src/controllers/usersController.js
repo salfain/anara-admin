@@ -101,6 +101,23 @@ async function updateRole(req, res, next) {
   }
 }
 
+async function approve(req, res, next) {
+  try {
+    const result = await pool.query(
+      `UPDATE users SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const user = result.rows[0];
+    await logActivity(req.user.id, 'approve', 'user', user.id, `menyetujui akun "${user.email}"`);
+    res.json({ data: sanitizeUser(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     if (parseInt(req.params.id, 10) === req.user.id) {
@@ -149,4 +166,4 @@ async function activity(req, res, next) {
   }
 }
 
-module.exports = { list, invite, updateRole, remove, activity };
+module.exports = { list, invite, updateRole, approve, remove, activity };

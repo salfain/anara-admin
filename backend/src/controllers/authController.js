@@ -36,15 +36,18 @@ async function signup(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, name, role)
-       VALUES ($1, $2, $3, 'cs')
+      `INSERT INTO users (email, password_hash, name, role, status)
+       VALUES ($1, $2, $3, 'cs', 'pending')
        RETURNING *`,
       [email, passwordHash, name]
     );
 
     const user = result.rows[0];
-    const token = signToken(user);
-    res.status(201).json({ token, user: sanitizeUser(user) });
+    res.status(201).json({
+      pending: true,
+      message: 'Akun berhasil dibuat. Menunggu persetujuan admin sebelum bisa login.',
+      user: sanitizeUser(user),
+    });
   } catch (err) {
     next(err);
   }
@@ -66,6 +69,10 @@ async function login(req, res, next) {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (user.status === 'pending') {
+      return res.status(403).json({ error: 'Akun Anda masih menunggu persetujuan admin.' });
     }
 
     const token = signToken(user);
@@ -94,8 +101,8 @@ async function googleAuth(req, res, next) {
 
     if (!user) {
       const insert = await pool.query(
-        `INSERT INTO users (email, name, google_id, role)
-         VALUES ($1, $2, $3, 'cs')
+        `INSERT INTO users (email, name, google_id, role, status)
+         VALUES ($1, $2, $3, 'cs', 'pending')
          RETURNING *`,
         [email, name, googleId]
       );
@@ -106,6 +113,10 @@ async function googleAuth(req, res, next) {
         [googleId, user.id]
       );
       user = update.rows[0];
+    }
+
+    if (user.status === 'pending') {
+      return res.status(403).json({ error: 'Akun Anda masih menunggu persetujuan admin.', pending: true });
     }
 
     const token = signToken(user);
