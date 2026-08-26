@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LogOut, MessageSquare, Sun, Moon } from 'lucide-react';
+import { LogOut, Sun, Moon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
 import { navItems } from '../data/navItems';
 import InstallPwaButton from './InstallPwaButton';
+import AnaraLogo from './AnaraLogo';
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
@@ -17,11 +18,8 @@ export default function Sidebar() {
 
   return (
     <div className="hidden lg:flex w-[250px] shrink-0 bg-surface border-r border-gray-med flex-col h-full">
-      <div className="flex items-center gap-2.5 px-4 pt-4 pb-2 shrink-0">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#2563eb' }}>
-          <MessageSquare size={18} color="#fff" />
-        </div>
-        <div className="text-base font-semibold text-gray-dark">Anara</div>
+      <div className="flex items-center px-4 pt-4 pb-2 shrink-0">
+        <AnaraLogo height={34} />
       </div>
 
       <nav className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 px-4 py-2">

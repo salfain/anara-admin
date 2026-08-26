@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import AnaraLogo from '../components/AnaraLogo';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -18,14 +19,10 @@ export default function Signup() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6" style={{ background: 'linear-gradient(180deg,#f9fafb 0%,#eef2f7 100%)' }}>
       <div className="w-full max-w-[400px] bg-surface border border-gray-med rounded-xl shadow-md px-8 py-10 flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-[10px] flex items-center justify-center" style={{ background: '#2563eb' }}>
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2 L14.5 8.5 L21 9.3 L16 13.9 L17.4 20.4 L12 17 L6.6 20.4 L8 13.9 L3 9.3 L9.5 8.5 Z" />
-            </svg>
-          </div>
+        <div className="flex flex-col items-center gap-3">
+          <AnaraLogo height={48} />
           <div className="text-xl font-semibold text-gray-dark">Buat Akun</div>
-          <div className="text-sm text-secondary">Daftar untuk mulai pakai Anara Quick Replies</div>
+          <div className="text-sm text-secondary -mt-1">Daftar untuk mulai pakai Anara Quick Replies</div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
