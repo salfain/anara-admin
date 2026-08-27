@@ -1,10 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import LeadModal, { LEAD_STATUSES } from '../components/LeadModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { leadsToCsv, downloadCsv, parseLeadsCsv } from '../utils/leadsCsv';
+
+const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+function monthKey(dateStr) {
+  if (!dateStr) return null;
+  return String(dateStr).slice(0, 7);
+}
+
+function monthLabel(key) {
+  const [y, m] = key.split('-');
+  return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+}
 
 const STATUS_STYLE = {
   Baru: { background: '#eff6ff', color: '#2563eb' },
@@ -27,6 +40,9 @@ export default function Leads() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [picFilter, setPicFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('all');
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -66,16 +82,52 @@ export default function Leads() {
     return leads.filter((l) => {
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
       if (picFilter !== 'all' && l.picSales !== picFilter) return false;
+      if (monthFilter !== 'all' && monthKey(l.entryDate) !== monthFilter) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return [l.whatsapp, l.picSales, l.notes, l.country].filter(Boolean).join(' ').toLowerCase().includes(q);
     });
-  }, [leads, search, statusFilter, picFilter]);
+  }, [leads, search, statusFilter, picFilter, monthFilter]);
 
   const picFilterOptions = useMemo(() => {
     const fromLeads = leads.map((l) => l.picSales).filter(Boolean);
     return [...new Set([...picOptions, ...fromLeads])].sort();
   }, [leads, picOptions]);
+
+  const monthFilterOptions = useMemo(() => {
+    const keys = [...new Set(leads.map((l) => monthKey(l.entryDate)).filter(Boolean))];
+    return keys.sort().reverse();
+  }, [leads]);
+
+  async function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const { records, skipped } = parseLeadsCsv(text);
+      if (records.length === 0) {
+        push('Tidak ada baris valid untuk diimport. Pastikan kolom Tanggal Masuk dan Nomor WhatsApp terisi.', 'error');
+        return;
+      }
+      const { data } = await api.post('/leads/bulk', { rows: records });
+      const totalSkipped = skipped + (data.data.skipped || 0);
+      push(`${data.data.imported} lead berhasil diimport${totalSkipped ? `, ${totalSkipped} dilewati` : ''}.`);
+      fetchLeads(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal mengimport file', 'error');
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function handleExport() {
+    const csv = leadsToCsv(filtered);
+    const suffix = monthFilter !== 'all' ? monthFilter : 'semua';
+    downloadCsv(`laporan-follow-up-${suffix}.csv`, csv);
+  }
 
   function openAdd() {
     setEditing(null);
@@ -139,14 +191,32 @@ export default function Leads() {
             Rekap lead dan progres follow-up tim sales — dari lead masuk sampai closing.
           </div>
         </div>
-        <button
-          onClick={openAdd}
-          className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
-          style={{ background: '#2563eb' }}
-        >
-          <Plus size={16} />
-          Tambah Lead
-        </button>
+        <div className="flex gap-2 flex-wrap shrink-0">
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+          >
+            <Upload size={16} />
+            {importing ? 'Mengimport...' : 'Import CSV'}
+          </button>
+          <button
+            onClick={handleExport}
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button
+            onClick={openAdd}
+            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            style={{ background: '#2563eb' }}
+          >
+            <Plus size={16} />
+            Tambah Lead
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -160,6 +230,16 @@ export default function Leads() {
             className="w-full h-10 pl-9 pr-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
+        <select
+          value={monthFilter}
+          onChange={(e) => setMonthFilter(e.target.value)}
+          className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="all">Semua Bulan</option>
+          {monthFilterOptions.map((key) => (
+            <option key={key} value={key}>{monthLabel(key)}</option>
+          ))}
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -181,6 +261,12 @@ export default function Leads() {
           ))}
         </select>
       </div>
+
+      {monthFilter !== 'all' && (
+        <div className="text-sm text-secondary -mt-2">
+          Menampilkan <strong className="text-gray-dark">{filtered.length}</strong> lead untuk <strong className="text-gray-dark">{monthLabel(monthFilter)}</strong>.
+        </div>
+      )}
 
       <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
         <table className="w-full text-xs table-fixed">
@@ -218,7 +304,7 @@ export default function Leads() {
             )}
             {!loading && filtered.length === 0 && (
               <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
-                {search || statusFilter !== 'all' || picFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
+                {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
               </td></tr>
             )}
             {!loading && filtered.map((l, idx) => (
