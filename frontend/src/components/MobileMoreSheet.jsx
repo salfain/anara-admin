@@ -25,7 +25,7 @@ export default function MobileMoreSheet({ open, onClose, overflowItems }) {
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <div className="text-base font-semibold text-gray-dark">Menu</div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-secondary cursor-pointer">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-secondary cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -69,10 +69,10 @@ export default function MobileMoreSheet({ open, onClose, overflowItems }) {
         )}
 
         <div className="px-3 py-3 flex flex-col gap-2">
-          <div className="flex gap-1 bg-gray-light rounded-lg p-1">
+          <div className="flex gap-1 bg-gray-light rounded-full p-1">
             <button
               onClick={() => theme !== 'light' && toggleTheme()}
-              className="flex-1 h-9 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`flex-1 h-9 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${theme === 'light' ? 'btn-3d-sm btn-3d' : ''}`}
               style={theme === 'light' ? { background: '#2563eb', color: '#fff' } : { color: 'var(--color-secondary)' }}
             >
               <Sun size={14} />
@@ -80,7 +80,7 @@ export default function MobileMoreSheet({ open, onClose, overflowItems }) {
             </button>
             <button
               onClick={() => theme !== 'dark' && toggleTheme()}
-              className="flex-1 h-9 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`flex-1 h-9 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${theme === 'dark' ? 'btn-3d-sm btn-3d' : ''}`}
               style={theme === 'dark' ? { background: '#2563eb', color: '#fff' } : { color: 'var(--color-secondary)' }}
             >
               <Moon size={14} />

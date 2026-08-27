@@ -182,7 +182,7 @@ export default function QuickReplies() {
               {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
-          <button onClick={clearFilters} className="ml-auto h-9 px-4 bg-surface text-secondary border border-gray-med rounded-lg text-[13px] font-semibold self-end cursor-pointer">
+          <button onClick={clearFilters} className="ml-auto h-9 px-4 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold self-end cursor-pointer">
             Clear filters
           </button>
         </div>
@@ -224,7 +224,7 @@ export default function QuickReplies() {
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="w-8 h-8 border border-gray-med bg-surface rounded-md text-secondary disabled:opacity-40 cursor-pointer"
+              className="w-8 h-8 border border-gray-med bg-surface rounded-full btn-3d-secondary btn-3d-sm text-secondary disabled:opacity-40 cursor-pointer"
             >
               ‹
             </button>
@@ -232,7 +232,7 @@ export default function QuickReplies() {
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                className="w-8 h-8 rounded-md text-[13px] font-semibold cursor-pointer"
+                className={`w-8 h-8 rounded-full text-[13px] font-semibold cursor-pointer ${n === page ? 'btn-3d-sm btn-3d' : ''}`}
                 style={n === page ? { background: '#2563eb', color: '#fff', border: 'none' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
               >
                 {n}
@@ -241,7 +241,7 @@ export default function QuickReplies() {
             <button
               disabled={page >= pagination.totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="w-8 h-8 border border-gray-med bg-surface rounded-md text-secondary disabled:opacity-40 cursor-pointer"
+              className="w-8 h-8 border border-gray-med bg-surface rounded-full btn-3d-secondary btn-3d-sm text-secondary disabled:opacity-40 cursor-pointer"
             >
               ›
             </button>

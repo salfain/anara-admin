@@ -85,10 +85,10 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
             )}
             {isAdmin && (
               <div className="flex gap-1.5">
-                <button onClick={() => onEdit(template)} className="w-7 h-7 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer">
+                <button onClick={() => onEdit(template)} className="w-7 h-7 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer">
                   <Pencil size={12} />
                 </button>
-                <button onClick={() => onDelete(template)} className="w-7 h-7 bg-surface border border-gray-med rounded-md flex items-center justify-center cursor-pointer" style={{ color: '#ef4444' }}>
+                <button onClick={() => onDelete(template)} className="w-7 h-7 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer" style={{ background: '#ef4444' }}>
                   <Trash2 size={12} />
                 </button>
               </div>
@@ -125,7 +125,7 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
                 <button
                   key={v.label + vi}
                   onClick={() => setVariantIndex(vi)}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer"
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer ${vi === variantIndex ? 'btn-3d-sm btn-3d' : ''}`}
                   style={vi === variantIndex ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-gray-light)', color: 'var(--color-secondary)', border: '1px solid var(--color-gray-med)' }}
                 >
                   {v.label}

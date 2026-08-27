@@ -130,7 +130,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
                 <button
                   type="button"
                   onClick={() => { setCustomCountry(false); set('country', ''); }}
-                  className="h-10 px-3 bg-surface text-secondary border border-gray-med rounded-lg text-xs font-semibold cursor-pointer shrink-0"
+                  className="h-10 px-3 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-xs font-semibold cursor-pointer shrink-0"
                 >
                   Pilih dari daftar
                 </button>

@@ -148,14 +148,14 @@ export default function Packages() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => handleView(f)}
-                className="h-8 px-3 bg-surface text-gray-dark border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
               >
                 <Eye size={13} />
                 Lihat
               </button>
               <button
                 onClick={() => handleDownload(f)}
-                className="h-8 px-3 bg-surface border border-primary rounded-md text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 bg-surface border border-primary rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
                 style={{ color: '#2563eb', borderColor: '#2563eb' }}
               >
                 <Download size={13} />
@@ -164,8 +164,8 @@ export default function Packages() {
               {isAdmin && (
                 <button
                   onClick={() => setDeleteTarget(f)}
-                  className="h-8 px-3 bg-surface border border-gray-med rounded-md text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
-                  style={{ color: '#ef4444' }}
+                  className="h-8 px-3 rounded-full btn-3d-danger btn-3d-sm text-white text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
+                  style={{ background: '#ef4444' }}
                 >
                   <Trash2 size={13} />
                   Delete

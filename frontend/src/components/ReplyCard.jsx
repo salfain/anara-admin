@@ -24,15 +24,15 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, on
           </button>
           <button
             onClick={(e) => stop(e, () => onEdit(reply))}
-            className="w-8 h-8 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer"
           >
             <Pencil size={14} />
           </button>
           {isAdmin && (
             <button
               onClick={(e) => stop(e, () => onDelete(reply))}
-              className="w-8 h-8 bg-surface text-danger border border-gray-med rounded-md flex items-center justify-center cursor-pointer"
-              style={{ color: '#ef4444' }}
+              className="w-8 h-8 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer"
+              style={{ background: '#ef4444' }}
             >
               <Trash2 size={14} />
             </button>

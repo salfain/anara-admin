@@ -91,7 +91,7 @@ export default function FollowUpTemplateModal({ open, onClose, onSubmit, initial
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-med">
           <div className="text-xl font-semibold text-gray-dark">{isEdit ? 'Edit Template' : 'Tambah Template Follow-Up'}</div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:bg-gray-light cursor-pointer">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-gray-light cursor-pointer">
             <X size={18} />
           </button>
         </div>
@@ -130,7 +130,7 @@ export default function FollowUpTemplateModal({ open, onClose, onSubmit, initial
                   key={k.value}
                   type="button"
                   onClick={() => update('kind', k.value)}
-                  className="h-9 px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer"
+                  className={`h-9 px-3.5 rounded-full text-[13px] font-semibold cursor-pointer ${form.kind === k.value ? 'btn-3d-sm btn-3d' : ''}`}
                   style={form.kind === k.value ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-gray-light)', color: 'var(--color-secondary)', border: '1px solid var(--color-gray-med)' }}
                 >
                   {k.label}
@@ -158,13 +158,13 @@ export default function FollowUpTemplateModal({ open, onClose, onSubmit, initial
                       className={inputCls}
                     />
                     {form.steps.length > 1 && (
-                      <button type="button" onClick={() => removeStep(i)} className="text-xs font-medium self-start cursor-pointer flex items-center gap-1" style={{ color: '#ef4444' }}>
+                      <button type="button" onClick={() => removeStep(i)} className="h-7 px-2.5 rounded-full btn-3d-danger btn-3d-sm text-white text-xs font-medium self-start cursor-pointer flex items-center gap-1" style={{ background: '#ef4444' }}>
                         <Trash2 size={12} /> Hapus langkah
                       </button>
                     )}
                   </div>
                 ))}
-                <button type="button" onClick={addStep} className="h-9 px-3 border border-dashed border-gray-med rounded-lg text-[13px] font-semibold text-secondary flex items-center justify-center gap-1.5 cursor-pointer">
+                <button type="button" onClick={addStep} className="h-9 px-3 border border-dashed border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold text-secondary flex items-center justify-center gap-1.5 cursor-pointer">
                   <Plus size={14} /> Tambah langkah
                 </button>
               </div>
@@ -190,13 +190,13 @@ export default function FollowUpTemplateModal({ open, onClose, onSubmit, initial
                       className={inputCls}
                     />
                     {form.variants.length > 1 && (
-                      <button type="button" onClick={() => removeVariant(i)} className="text-xs font-medium self-start cursor-pointer flex items-center gap-1" style={{ color: '#ef4444' }}>
+                      <button type="button" onClick={() => removeVariant(i)} className="h-7 px-2.5 rounded-full btn-3d-danger btn-3d-sm text-white text-xs font-medium self-start cursor-pointer flex items-center gap-1" style={{ background: '#ef4444' }}>
                         <Trash2 size={12} /> Hapus varian
                       </button>
                     )}
                   </div>
                 ))}
-                <button type="button" onClick={addVariant} className="h-9 px-3 border border-dashed border-gray-med rounded-lg text-[13px] font-semibold text-secondary flex items-center justify-center gap-1.5 cursor-pointer">
+                <button type="button" onClick={addVariant} className="h-9 px-3 border border-dashed border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold text-secondary flex items-center justify-center gap-1.5 cursor-pointer">
                   <Plus size={14} /> Tambah varian
                 </button>
               </div>

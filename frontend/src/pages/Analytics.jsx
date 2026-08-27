@@ -63,7 +63,7 @@ export default function Analytics() {
             <button
               key={p.key}
               onClick={() => setPreset(p.key)}
-              className="h-9 px-3.5 rounded-lg text-[13px] font-semibold cursor-pointer"
+              className={`h-9 px-3.5 rounded-full text-[13px] font-semibold cursor-pointer ${preset === p.key ? 'btn-3d-sm btn-3d' : ''}`}
               style={preset === p.key ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
             >
               {p.label}

@@ -38,7 +38,7 @@ export default function Sidebar() {
         <button
           onClick={toggleCollapsed}
           title={collapsed ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
-          className={`w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:bg-gray-light cursor-pointer shrink-0 ${collapsed ? '' : 'ml-auto'}`}
+          className={`w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-gray-light cursor-pointer shrink-0 ${collapsed ? '' : 'ml-auto'}`}
         >
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
@@ -90,17 +90,17 @@ export default function Sidebar() {
           <div className="relative group">
             <button
               onClick={toggleTheme}
-              className="w-full h-9 rounded-md text-xs font-semibold flex items-center justify-center cursor-pointer text-secondary hover:bg-gray-light"
+              className="w-full h-9 rounded-full text-xs font-semibold flex items-center justify-center cursor-pointer text-secondary hover:bg-gray-light"
             >
               {theme === 'light' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <Tooltip label={theme === 'light' ? 'Mode Terang' : 'Mode Gelap'} show />
           </div>
         ) : (
-          <div className="flex gap-1 bg-gray-light rounded-lg p-1 mb-1">
+          <div className="flex gap-1 bg-gray-light rounded-full p-1 mb-1">
             <button
               onClick={() => theme !== 'light' && toggleTheme()}
-              className="flex-1 h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`flex-1 h-8 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${theme === 'light' ? 'btn-3d-sm btn-3d' : ''}`}
               style={theme === 'light' ? { background: '#2563eb', color: '#fff' } : { color: 'var(--color-secondary)' }}
             >
               <Sun size={14} />
@@ -108,7 +108,7 @@ export default function Sidebar() {
             </button>
             <button
               onClick={() => theme !== 'dark' && toggleTheme()}
-              className="flex-1 h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              className={`flex-1 h-8 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${theme === 'dark' ? 'btn-3d-sm btn-3d' : ''}`}
               style={theme === 'dark' ? { background: '#2563eb', color: '#fff' } : { color: 'var(--color-secondary)' }}
             >
               <Moon size={14} />

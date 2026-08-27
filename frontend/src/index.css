@@ -81,3 +81,43 @@ body {
   box-shadow: 0 3px 0 0 var(--color-gray-med);
   transform: none;
 }
+
+.btn-3d-danger {
+  border-radius: 9999px;
+  box-shadow: 0 3px 0 0 #b91c1c, 0 6px 14px -6px rgba(239, 68, 68, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+.btn-3d-danger:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.btn-3d-danger:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 0 #b91c1c, 0 2px 6px -2px rgba(239, 68, 68, 0.5);
+}
+.btn-3d-danger:disabled {
+  box-shadow: 0 3px 0 0 #b91c1c;
+  transform: none;
+}
+
+/* Compact variant for icon-only buttons (edit/delete/etc in dense rows) */
+.btn-3d-sm {
+  box-shadow: 0 2px 0 0 var(--color-primary-hover), 0 3px 8px -4px rgba(37, 99, 235, 0.5);
+}
+.btn-3d-sm:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 0 var(--color-primary-hover), 0 1px 4px -2px rgba(37, 99, 235, 0.5);
+}
+.btn-3d-secondary.btn-3d-sm {
+  box-shadow: 0 2px 0 0 var(--color-gray-med), 0 3px 6px -4px rgba(0, 0, 0, 0.15);
+}
+.btn-3d-secondary.btn-3d-sm:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 0 var(--color-gray-med), 0 1px 3px -2px rgba(0, 0, 0, 0.15);
+}
+.btn-3d-danger.btn-3d-sm {
+  box-shadow: 0 2px 0 0 #b91c1c, 0 3px 8px -4px rgba(239, 68, 68, 0.5);
+}
+.btn-3d-danger.btn-3d-sm:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 0 #b91c1c, 0 1px 4px -2px rgba(239, 68, 68, 0.5);
+}

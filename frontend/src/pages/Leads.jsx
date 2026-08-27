@@ -335,10 +335,10 @@ export default function Leads() {
                 <td className="px-2 py-2 text-secondary truncate" title={l.notes || ''}>{l.notes || '-'}</td>
                 <td className="px-2 py-2">
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer shrink-0">
+                    <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
                       <Pencil size={11} />
                     </button>
-                    <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 bg-surface border border-gray-med rounded-md flex items-center justify-center cursor-pointer shrink-0" style={{ color: '#ef4444' }}>
+                    <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0" style={{ background: '#ef4444' }}>
                       <Trash2 size={11} />
                     </button>
                   </div>

@@ -29,7 +29,7 @@ export default function Admin() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="h-9 px-4 rounded-lg text-[13px] font-semibold cursor-pointer"
+            className={`h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer ${tab === t.key ? 'btn-3d-sm btn-3d' : ''}`}
             style={tab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: 'var(--color-secondary)' }}
           >
             {t.label}
@@ -205,7 +205,7 @@ function UsersTab({ currentUser }) {
                       {u.status === 'pending' && (
                         <button
                           onClick={() => handleApprove(u)}
-                          className="h-7 px-2.5 border border-gray-med bg-surface rounded-md text-xs font-semibold cursor-pointer"
+                          className="h-7 px-2.5 border border-gray-med bg-surface rounded-full btn-3d-secondary btn-3d-sm text-xs font-semibold cursor-pointer"
                           style={{ color: '#16a34a' }}
                         >
                           Approve
@@ -214,8 +214,8 @@ function UsersTab({ currentUser }) {
                       <button
                         onClick={() => setDeleteTarget(u)}
                         disabled={u.id === currentUser?.id}
-                        className="w-7 h-7 border border-gray-med bg-surface rounded-md flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                        style={{ color: '#ef4444' }}
+                        className="w-7 h-7 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        style={{ background: '#ef4444' }}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -236,7 +236,7 @@ function UsersTab({ currentUser }) {
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                className="w-7 h-7 rounded-md text-xs font-semibold cursor-pointer"
+                className="w-7 h-7 rounded-full text-xs font-semibold cursor-pointer"
                 style={n === page ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
               >
                 {n}
@@ -291,7 +291,7 @@ function UsersTab({ currentUser }) {
               <button
                 key={n}
                 onClick={() => setActivityPage(n)}
-                className="w-7 h-7 rounded-md text-xs font-semibold cursor-pointer"
+                className="w-7 h-7 rounded-full text-xs font-semibold cursor-pointer"
                 style={n === activityPage ? { background: '#2563eb', color: '#fff' } : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
               >
                 {n}
@@ -431,7 +431,7 @@ function RolesTab({ currentUser }) {
                 onClick={() => handleRoleChange(u, targetRole)}
                 disabled={u.id === currentUser?.id || updatingId === u.id}
                 title={u.id === currentUser?.id ? 'Tidak bisa mengubah role sendiri' : undefined}
-                className="h-8 px-3 text-xs font-semibold border border-gray-med rounded-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                className="h-8 px-3 text-xs font-semibold border border-gray-med rounded-full btn-3d-secondary btn-3d-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
               >
                 {updatingId === u.id ? '...' : `Jadikan ${targetLabel}`}
               </button>
@@ -590,11 +590,11 @@ function CategoriesTab() {
                 </td>
                 <td className="text-sm text-gray-dark px-4 py-3 border-b border-gray-med">{c.reply_count}</td>
                 <td className="px-4 py-3 border-b border-gray-med">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => startEdit(c)} className="text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(c)} className="h-7 px-2.5 border border-gray-med bg-surface rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
                       <Pencil size={12} /> Edit
                     </button>
-                    <button onClick={() => setDeleteTarget(c)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                    <button onClick={() => setDeleteTarget(c)} className="h-7 px-2.5 rounded-full btn-3d-danger btn-3d-sm text-white text-[13px] font-medium cursor-pointer" style={{ background: '#ef4444' }}>Delete</button>
                   </div>
                 </td>
               </tr>
@@ -749,11 +749,11 @@ function PackagesTab() {
                 <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-med">{p.name}</td>
                 <td className="text-sm text-secondary px-4 py-3 border-b border-gray-med">{p.destination || '-'}</td>
                 <td className="px-4 py-3 border-b border-gray-med">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => startEdit(p)} className="text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(p)} className="h-7 px-2.5 border border-gray-med bg-surface rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
                       <Pencil size={12} /> Edit
                     </button>
-                    <button onClick={() => setDeleteTarget(p)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                    <button onClick={() => setDeleteTarget(p)} className="h-7 px-2.5 rounded-full btn-3d-danger btn-3d-sm text-white text-[13px] font-medium cursor-pointer" style={{ background: '#ef4444' }}>Delete</button>
                   </div>
                 </td>
               </tr>

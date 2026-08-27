@@ -49,7 +49,7 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-med">
           <div className="text-xl font-semibold text-gray-dark">{isEdit ? 'Edit Quick Reply' : 'Tambah Quick Reply'}</div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-secondary hover:bg-gray-light cursor-pointer">
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-gray-light cursor-pointer">
             <X size={18} />
           </button>
         </div>

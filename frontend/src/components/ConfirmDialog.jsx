@@ -7,13 +7,13 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
         <div className="text-lg font-semibold text-gray-dark">{title}</div>
         <div className="text-sm text-secondary">{message}</div>
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onCancel} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+          <button onClick={onCancel} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer">
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={confirming}
-            className="h-9 px-4 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60"
+            className="h-9 px-4 text-white rounded-full btn-3d-danger text-sm font-semibold cursor-pointer disabled:opacity-60"
             style={{ background: '#ef4444' }}
           >
             {confirming ? 'Menghapus...' : 'Delete'}
