@@ -31,6 +31,8 @@ export default function Leads() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [picOptions, setPicOptions] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
 
   const fetchLeads = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -46,6 +48,18 @@ export default function Leads() {
 
   useEffect(() => { fetchLeads(true); }, [fetchLeads]);
   useAutoRefresh(() => fetchLeads(false), 15000);
+
+  useEffect(() => {
+    api.get('/users/simple')
+      .then(({ data }) => setPicOptions(data.data.filter((u) => u.role === 'cs').map((u) => u.name)))
+      .catch(() => {});
+    api.get('/packages')
+      .then(({ data }) => {
+        const names = [...new Set(data.data.map((p) => p.destination).filter(Boolean))].sort();
+        setCountryOptions(names);
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
@@ -218,6 +232,8 @@ export default function Leads() {
         onSubmit={handleSubmit}
         initial={editing}
         saving={saving}
+        picOptions={picOptions}
+        countryOptions={countryOptions}
       />
 
       <ConfirmDialog

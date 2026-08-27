@@ -19,7 +19,7 @@ function toInputDate(value) {
   return String(value).slice(0, 10);
 }
 
-export default function LeadModal({ open, onClose, onSubmit, initial, saving }) {
+export default function LeadModal({ open, onClose, onSubmit, initial, saving, picOptions = [], countryOptions = [] }) {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
 
@@ -51,6 +51,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving }) 
 
   function handleSubmit(e) {
     e.preventDefault();
+    setError('');
     if (!form.entryDate) return setError('Tanggal masuk wajib diisi.');
     if (!form.whatsapp.trim()) return setError('Nomor WhatsApp wajib diisi.');
     onSubmit(form);
@@ -86,12 +87,16 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving }) 
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">PIC Sales</label>
-            <input
+            <select
               value={form.picSales}
               onChange={(e) => set('picSales', e.target.value)}
-              placeholder="Nama sales"
               className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-            />
+            >
+              <option value="">Pilih CS</option>
+              {(form.picSales && !picOptions.includes(form.picSales) ? [form.picSales, ...picOptions] : picOptions).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Status</label>
@@ -111,8 +116,14 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving }) 
               value={form.country}
               onChange={(e) => set('country', e.target.value)}
               placeholder="e.g. Jepang"
+              list="lead-country-options"
               className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
+            <datalist id="lead-country-options">
+              {countryOptions.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
           </div>
         </div>
 

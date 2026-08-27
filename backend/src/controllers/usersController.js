@@ -41,6 +41,17 @@ async function list(req, res, next) {
   }
 }
 
+async function listSimple(req, res, next) {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, role FROM users WHERE status = 'active' ORDER BY name ASC`
+    );
+    res.json({ data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function invite(req, res, next) {
   try {
     const { email, name, role = 'cs', password } = req.body;
@@ -166,4 +177,4 @@ async function activity(req, res, next) {
   }
 }
 
-module.exports = { list, invite, updateRole, approve, remove, activity };
+module.exports = { list, listSimple, invite, updateRole, approve, remove, activity };
