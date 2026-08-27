@@ -8,6 +8,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const TABS = [
   { key: 'users', label: 'Users' },
+  { key: 'roles', label: 'Roles' },
   { key: 'categories', label: 'Categories' },
   { key: 'packages', label: 'Packages' },
 ];
@@ -37,6 +38,7 @@ export default function Admin() {
       </div>
 
       {tab === 'users' && <UsersTab currentUser={currentUser} />}
+      {tab === 'roles' && <RolesTab currentUser={currentUser} />}
       {tab === 'categories' && <CategoriesTab />}
       {tab === 'packages' && <PackagesTab />}
     </div>
@@ -95,16 +97,6 @@ function UsersTab({ currentUser }) {
   useEffect(() => { fetchActivity(); }, [fetchActivity]);
   useAutoRefresh(fetchActivity, 15000, [activityPage]);
 
-  async function handleRoleChange(u, role) {
-    try {
-      await api.put(`/users/${u.id}/role`, { role });
-      push('Role berhasil diubah');
-      fetchUsers();
-    } catch (err) {
-      push(err.response?.data?.error || 'Gagal mengubah role', 'error');
-    }
-  }
-
   async function handleApprove(u) {
     try {
       await api.put(`/users/${u.id}/approve`);
@@ -149,7 +141,10 @@ function UsersTab({ currentUser }) {
     <>
       <div className="bg-surface rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-4 sm:p-6 flex-wrap gap-3">
-          <div className="text-base font-semibold text-gray-dark">User Management</div>
+          <div>
+            <div className="text-base font-semibold text-gray-dark">User Management</div>
+            <div className="text-xs text-secondary mt-0.5">Untuk mengubah role, buka tab Roles.</div>
+          </div>
           <div className="flex gap-3 items-center flex-wrap w-full sm:w-auto">
             <input
               type="text"
@@ -187,16 +182,12 @@ function UsersTab({ currentUser }) {
                   <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{u.email}</td>
                   <td className="text-sm text-gray-dark px-4 py-3.5 border-b border-gray-med">{u.name}</td>
                   <td className="text-sm px-4 py-3.5 border-b border-gray-med">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u, e.target.value)}
-                      disabled={u.id === currentUser?.id}
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full border-0 cursor-pointer disabled:cursor-not-allowed"
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
                       style={u.role === 'admin' ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' }}
                     >
-                      <option value="cs">CS</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                      {u.role === 'admin' ? 'Admin' : 'CS'}
+                    </span>
                   </td>
                   <td className="px-4 py-3.5 border-b border-gray-med">
                     <span
@@ -381,6 +372,102 @@ function UsersTab({ currentUser }) {
         confirming={deleting}
       />
     </>
+  );
+}
+
+function RolesTab({ currentUser }) {
+  const push = useToastStore((s) => s.push);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const fetchUsers = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const { data } = await api.get('/users', { params: { limit: 100 } });
+      setUsers(data.data);
+    } catch {
+      push('Gagal memuat users', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
+
+  useEffect(() => { fetchUsers(true); }, [fetchUsers]);
+  useAutoRefresh(() => fetchUsers(false), 15000);
+
+  async function handleRoleChange(u, role) {
+    setUpdatingId(u.id);
+    try {
+      await api.put(`/users/${u.id}/role`, { role });
+      push(`${u.name} sekarang menjadi ${role === 'admin' ? 'Admin' : 'CS'}`);
+      fetchUsers(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal mengubah role', 'error');
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  const admins = users.filter((u) => u.role === 'admin');
+  const csTeam = users.filter((u) => u.role === 'cs');
+
+  function RoleColumn({ title, count, badgeStyle, list, targetRole, targetLabel }) {
+    return (
+      <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-med">
+          <div className="text-sm font-semibold text-gray-dark">{title}</div>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={badgeStyle}>{count}</span>
+        </div>
+        <div className="flex flex-col divide-y divide-gray-med">
+          {list.length === 0 && <div className="text-sm text-secondary text-center py-8">Belum ada user.</div>}
+          {list.map((u) => (
+            <div key={u.id} className="flex items-center justify-between gap-3 px-5 py-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-dark truncate">{u.name}</div>
+                <div className="text-xs text-secondary truncate">{u.email}</div>
+              </div>
+              <button
+                onClick={() => handleRoleChange(u, targetRole)}
+                disabled={u.id === currentUser?.id || updatingId === u.id}
+                title={u.id === currentUser?.id ? 'Tidak bisa mengubah role sendiri' : undefined}
+                className="h-8 px-3 text-xs font-semibold border border-gray-med rounded-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                {updatingId === u.id ? '...' : `Jadikan ${targetLabel}`}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-sm text-secondary">Kelola siapa yang punya akses Admin dan siapa yang bertugas sebagai CS Team.</div>
+      {loading ? (
+        <div className="text-sm text-secondary text-center py-10">Memuat...</div>
+      ) : (
+        <div className="flex gap-4 flex-wrap items-start">
+          <RoleColumn
+            title="Admin"
+            count={admins.length}
+            badgeStyle={{ background: '#dbeafe', color: '#1e40af' }}
+            list={admins}
+            targetRole="cs"
+            targetLabel="CS"
+          />
+          <RoleColumn
+            title="CS Team"
+            count={csTeam.length}
+            badgeStyle={{ background: '#f1f5f9', color: '#475569' }}
+            list={csTeam}
+            targetRole="admin"
+            targetLabel="Admin"
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
