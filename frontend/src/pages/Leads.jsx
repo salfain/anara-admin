@@ -16,7 +16,7 @@ const STATUS_STYLE = {
 
 function fmtDate(value) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 export default function Leads() {
@@ -183,66 +183,77 @@ export default function Leads() {
       </div>
 
       <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-med bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
-                <th className="text-left px-4 py-3 whitespace-nowrap">No.</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">Tanggal Masuk</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">No. WhatsApp</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">PIC Sales</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">Negara</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">FU 1</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">FU 2</th>
-                <th className="text-left px-4 py-3 whitespace-nowrap">FU 3</th>
-                <th className="text-left px-4 py-3 min-w-[180px]">Notes</th>
-                <th className="text-right px-4 py-3 whitespace-nowrap">Aksi</th>
+        <table className="w-full text-xs table-fixed">
+          <colgroup>
+            <col className="w-[3%]" />
+            <col className="w-[8%]" />
+            <col className="w-[13%]" />
+            <col className="w-[10%]" />
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[19%]" />
+            <col className="w-[8%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-gray-med bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary">
+              <th className="text-left px-2 py-2.5">No.</th>
+              <th className="text-left px-2 py-2.5">Masuk</th>
+              <th className="text-left px-2 py-2.5">No. WhatsApp</th>
+              <th className="text-left px-2 py-2.5">PIC</th>
+              <th className="text-left px-2 py-2.5">Status</th>
+              <th className="text-left px-2 py-2.5">Negara</th>
+              <th className="text-left px-2 py-2.5">FU 1</th>
+              <th className="text-left px-2 py-2.5">FU 2</th>
+              <th className="text-left px-2 py-2.5">FU 3</th>
+              <th className="text-left px-2 py-2.5">Notes</th>
+              <th className="text-right px-2 py-2.5">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={11} className="text-center text-sm text-secondary py-10">Memuat...</td></tr>
+            )}
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
+                {search || statusFilter !== 'all' || picFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
+              </td></tr>
+            )}
+            {!loading && filtered.map((l, idx) => (
+              <tr key={l.id} className="border-b border-gray-med last:border-b-0 hover:bg-gray-light/60">
+                <td className="px-2 py-2 text-secondary truncate">{idx + 1}</td>
+                <td className="px-2 py-2 text-gray-dark truncate" title={fmtDate(l.entryDate)}>{fmtDate(l.entryDate)}</td>
+                <td className="px-2 py-2 text-gray-dark font-medium truncate" title={l.whatsapp}>{l.whatsapp}</td>
+                <td className="px-2 py-2 text-secondary truncate" title={l.picSales || ''}>{l.picSales || '-'}</td>
+                <td className="px-2 py-2 truncate">
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                    style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
+                  >
+                    {l.status}
+                  </span>
+                </td>
+                <td className="px-2 py-2 text-secondary truncate" title={l.country || ''}>{l.country || '-'}</td>
+                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp1)}</td>
+                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp2)}</td>
+                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp3)}</td>
+                <td className="px-2 py-2 text-secondary truncate" title={l.notes || ''}>{l.notes || '-'}</td>
+                <td className="px-2 py-2">
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer shrink-0">
+                      <Pencil size={11} />
+                    </button>
+                    <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 bg-surface border border-gray-med rounded-md flex items-center justify-center cursor-pointer shrink-0" style={{ color: '#ef4444' }}>
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan={11} className="text-center text-sm text-secondary py-10">Memuat...</td></tr>
-              )}
-              {!loading && filtered.length === 0 && (
-                <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
-                  {search || statusFilter !== 'all' || picFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
-                </td></tr>
-              )}
-              {!loading && filtered.map((l, idx) => (
-                <tr key={l.id} className="border-b border-gray-med last:border-b-0 hover:bg-gray-light/60">
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{idx + 1}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-dark">{fmtDate(l.entryDate)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-dark font-medium">{l.whatsapp}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{l.picSales || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className="text-[11px] font-semibold px-2 py-1 rounded-full"
-                      style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
-                    >
-                      {l.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{l.country || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{fmtDate(l.followUp1)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{fmtDate(l.followUp2)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{fmtDate(l.followUp3)}</td>
-                  <td className="px-4 py-3 text-secondary max-w-[240px] truncate" title={l.notes || ''}>{l.notes || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex justify-end gap-1.5">
-                      <button onClick={() => openEdit(l)} className="w-7 h-7 bg-surface text-secondary border border-gray-med rounded-md flex items-center justify-center cursor-pointer">
-                        <Pencil size={12} />
-                      </button>
-                      <button onClick={() => setDeleteTarget(l)} className="w-7 h-7 bg-surface border border-gray-med rounded-md flex items-center justify-center cursor-pointer" style={{ color: '#ef4444' }}>
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <LeadModal
