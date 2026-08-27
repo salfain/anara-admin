@@ -5,7 +5,6 @@ import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import LeadModal, { LEAD_STATUSES } from '../components/LeadModal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { leadsToCsv, downloadCsv, parseLeadsCsv } from '../utils/leadsCsv';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -42,6 +41,7 @@ export default function Leads() {
   const [picFilter, setPicFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -106,8 +106,8 @@ export default function Leads() {
 
     setImporting(true);
     try {
-      const text = await file.text();
-      const { records, skipped } = parseLeadsCsv(text);
+      const { parseLeadsExcel } = await import('../utils/leadsExcel');
+      const { records, skipped } = await parseLeadsExcel(file);
       if (records.length === 0) {
         push('Tidak ada baris valid untuk diimport. Pastikan kolom Tanggal Masuk dan Nomor WhatsApp terisi.', 'error');
         return;
@@ -123,10 +123,16 @@ export default function Leads() {
     }
   }
 
-  function handleExport() {
-    const csv = leadsToCsv(filtered);
-    const suffix = monthFilter !== 'all' ? monthFilter : 'semua';
-    downloadCsv(`laporan-follow-up-${suffix}.csv`, csv);
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const { leadsToExcel, downloadExcel } = await import('../utils/leadsExcel');
+      const buffer = leadsToExcel(filtered);
+      const suffix = monthFilter !== 'all' ? monthFilter : 'semua';
+      downloadExcel(`laporan-follow-up-${suffix}.xlsx`, buffer);
+    } finally {
+      setExporting(false);
+    }
   }
 
   function openAdd() {
@@ -192,21 +198,22 @@ export default function Leads() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap shrink-0">
-          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
             className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
           >
             <Upload size={16} />
-            {importing ? 'Mengimport...' : 'Import CSV'}
+            {importing ? 'Mengimport...' : 'Import Excel'}
           </button>
           <button
             onClick={handleExport}
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            disabled={exporting}
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
           >
             <Download size={16} />
-            Export CSV
+            {exporting ? 'Menyiapkan...' : 'Export Excel'}
           </button>
           <button
             onClick={openAdd}
