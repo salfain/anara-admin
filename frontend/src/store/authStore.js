@@ -35,6 +35,12 @@ const useAuthStore = create((set) => ({
 
   refreshUser: async () => {
     try {
+      // Reissue the token too — an old token may predate the isAdmin claim,
+      // and the backend trusts that claim (not a live role lookup) on every request.
+      const { data: refreshed } = await api.post('/auth/refresh');
+      localStorage.setItem('anara_token', refreshed.token);
+      set({ token: refreshed.token });
+
       const { data } = await api.get('/auth/me');
       localStorage.setItem('anara_user', JSON.stringify(data.user));
       set({ user: data.user });
