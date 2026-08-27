@@ -117,7 +117,7 @@ export default function Packages() {
         </div>
         <button
           onClick={openModal}
-          className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+          className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
           style={{ background: '#2563eb' }}
         >
           <Upload size={16} />
@@ -200,10 +200,10 @@ export default function Packages() {
             </div>
             {error && <div className="text-xs text-red-600">{error}</div>}
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowModal(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              <button type="button" onClick={() => setShowModal(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer">
                 Cancel
               </button>
-              <button type="submit" disabled={saving} className="h-9 px-4 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+              <button type="submit" disabled={saving} className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
                 {saving ? 'Mengupload...' : 'Save'}
               </button>
             </div>

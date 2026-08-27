@@ -80,7 +80,7 @@ export default function Dashboard() {
       <div className="flex gap-3 flex-wrap">
         <Link
           to="/quick-replies"
-          className="h-10 px-4 text-white rounded-lg text-[13px] font-semibold flex items-center cursor-pointer"
+          className="h-10 px-4 text-white rounded-full btn-3d text-[13px] font-semibold flex items-center cursor-pointer"
           style={{ background: '#2563eb' }}
         >
           Buka Quick Replies
@@ -88,14 +88,14 @@ export default function Dashboard() {
         {user?.role === 'admin' && (
           <Link
             to="/analytics"
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-[13px] font-semibold flex items-center cursor-pointer"
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold flex items-center cursor-pointer"
           >
             Lihat Analytics
           </Link>
         )}
         <Link
           to="/leads"
-          className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-[13px] font-semibold flex items-center cursor-pointer"
+          className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold flex items-center cursor-pointer"
         >
           Lihat Laporan Follow Up
         </Link>

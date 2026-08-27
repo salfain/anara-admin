@@ -40,13 +40,13 @@ export default function ReplyDetailModal({ reply, onClose, onCopy }) {
         <div className="flex justify-end gap-3 p-6 border-t border-gray-med">
           <button
             onClick={onClose}
-            className="h-10 px-5 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer"
+            className="h-10 px-5 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer"
           >
             Tutup
           </button>
           <button
             onClick={() => onCopy(reply)}
-            className="h-10 px-5 text-white rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2"
+            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer flex items-center gap-2"
             style={{ background: '#2563eb' }}
           >
             <Copy size={16} />

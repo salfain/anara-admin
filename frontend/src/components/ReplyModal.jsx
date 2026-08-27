@@ -130,14 +130,14 @@ export default function ReplyModal({ open, onClose, onSubmit, packages, categori
             <button
               type="button"
               onClick={onClose}
-              className="h-10 px-5 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer"
+              className="h-10 px-5 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="h-10 px-5 bg-primary text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60"
+              className="h-10 px-5 bg-primary text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60"
               style={{ background: '#2563eb' }}
             >
               {saving ? 'Menyimpan...' : 'Save'}

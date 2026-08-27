@@ -117,8 +117,8 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="h-12 text-white rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2 transition-transform active:scale-[0.98]"
-              style={{ background: '#2563eb', boxShadow: '0 8px 20px -6px rgba(37,99,235,0.5)' }}
+              className="h-12 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              style={{ background: '#2563eb' }}
             >
               {loading ? 'Memproses...' : 'Login'}
               {!loading && <ArrowRight size={16} />}

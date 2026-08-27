@@ -202,7 +202,7 @@ export default function Leads() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
           >
             <Upload size={16} />
             {importing ? 'Mengimport...' : 'Import Excel'}
@@ -210,14 +210,14 @@ export default function Leads() {
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
           >
             <Download size={16} />
             {exporting ? 'Menyiapkan...' : 'Export Excel'}
           </button>
           <button
             onClick={openAdd}
-            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
             style={{ background: '#2563eb' }}
           >
             <Plus size={16} />

@@ -151,7 +151,7 @@ export default function QuickReplies() {
           </div>
           <button
             onClick={openAdd}
-            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
             style={{ background: '#2563eb' }}
           >
             <Plus size={16} />

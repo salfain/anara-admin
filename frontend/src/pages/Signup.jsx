@@ -74,7 +74,7 @@ export default function Signup() {
               <div className="text-sm text-secondary">{pendingMessage}</div>
               <Link
                 to="/login"
-                className="h-11 w-full flex items-center justify-center text-white rounded-xl text-sm font-semibold mt-2"
+                className="h-11 w-full flex items-center justify-center text-white rounded-full btn-3d text-sm font-semibold mt-2"
                 style={{ background: '#2563eb' }}
               >
                 Kembali ke Login
@@ -155,8 +155,8 @@ export default function Signup() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="h-12 text-white rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-1 transition-transform active:scale-[0.98]"
-                  style={{ background: '#2563eb', boxShadow: '0 8px 20px -6px rgba(37,99,235,0.5)' }}
+                  className="h-12 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
+                  style={{ background: '#2563eb' }}
                 >
                   {loading ? 'Memproses...' : 'Daftar'}
                   {!loading && <ArrowRight size={16} />}

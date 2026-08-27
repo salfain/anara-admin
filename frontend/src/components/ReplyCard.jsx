@@ -16,7 +16,7 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, on
         <div className="flex gap-2 shrink-0">
           <button
             onClick={(e) => stop(e, () => onCopy(reply))}
-            className="h-8 px-3.5 bg-primary text-white rounded-md text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
+            className="h-8 px-3.5 bg-primary text-white rounded-full btn-3d text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer"
             style={{ background: '#2563eb' }}
           >
             <Copy size={14} />

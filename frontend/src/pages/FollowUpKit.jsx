@@ -46,7 +46,7 @@ function CopyButton({ text, small }) {
   return (
     <button
       onClick={handleCopy}
-      className={`${small ? 'h-7 px-2.5 text-xs' : 'h-8 px-3.5 text-[13px]'} text-white rounded-md font-semibold flex items-center gap-1.5 cursor-pointer shrink-0`}
+      className={`${small ? 'h-7 px-2.5 text-xs' : 'h-8 px-3.5 text-[13px]'} text-white rounded-full btn-3d font-semibold flex items-center gap-1.5 cursor-pointer shrink-0`}
       style={{ background: copied ? '#1d4ed8' : '#2563eb' }}
     >
       {copied ? <Check size={small ? 12 : 14} /> : <Copy size={small ? 12 : 14} />}
@@ -257,7 +257,7 @@ export default function FollowUpKit() {
         {isAdmin && (
           <button
             onClick={openAdd}
-            className="h-10 px-5 text-white rounded-lg text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
             style={{ background: '#2563eb' }}
           >
             <Plus size={16} />

@@ -155,7 +155,7 @@ function UsersTab({ currentUser }) {
             />
             <button
               onClick={() => setShowInvite(true)}
-              className="h-9 px-4 text-white rounded-lg text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="h-9 px-4 text-white rounded-full btn-3d text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer shrink-0"
               style={{ background: '#2563eb' }}
             >
               <Plus size={14} />
@@ -352,10 +352,10 @@ function UsersTab({ currentUser }) {
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer">
                 Cancel
               </button>
-              <button type="submit" disabled={inviting} className="h-9 px-4 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+              <button type="submit" disabled={inviting} className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
                 {inviting ? 'Menyimpan...' : 'Save'}
               </button>
             </div>
@@ -562,11 +562,11 @@ function CategoriesTab() {
         {error && <div className="text-xs text-red-600">{error}</div>}
         <div className="flex gap-2">
           {editing && (
-            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer">
               Cancel
             </button>
           )}
-          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
             {saving ? 'Menyimpan...' : editing ? 'Save' : 'Add Category'}
           </button>
         </div>
@@ -723,11 +723,11 @@ function PackagesTab() {
         {error && <div className="text-xs text-red-600">{error}</div>}
         <div className="flex gap-2">
           {editing && (
-            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold cursor-pointer">
               Cancel
             </button>
           )}
-          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
             {saving ? 'Menyimpan...' : editing ? 'Save' : 'Add Package'}
           </button>
         </div>
