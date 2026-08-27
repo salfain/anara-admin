@@ -7,15 +7,23 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function signToken(user) {
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role },
+    { sub: user.id, email: user.email, role: user.role, isAdmin: Boolean(user.is_admin) },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 }
 
 function sanitizeUser(user) {
-  const { password_hash, ...rest } = user;
-  return rest;
+  const { password_hash, is_admin, role_label, ...rest } = user;
+  return { ...rest, isAdmin: Boolean(is_admin), roleLabel: role_label || rest.role };
+}
+
+async function findUserWithRole(where, params) {
+  const result = await pool.query(
+    `SELECT u.*, r.is_admin, r.label AS role_label FROM users u LEFT JOIN roles r ON r.key = u.role WHERE ${where}`,
+    params
+  );
+  return result.rows[0];
 }
 
 async function signup(req, res, next) {
@@ -60,8 +68,7 @@ async function login(req, res, next) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
+    const user = await findUserWithRole('u.email = $1', [email]);
     if (!user || !user.password_hash) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -96,23 +103,21 @@ async function googleAuth(req, res, next) {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
 
-    let result = await pool.query('SELECT * FROM users WHERE google_id = $1 OR email = $2', [googleId, email]);
-    let user = result.rows[0];
+    let user = await findUserWithRole('u.google_id = $1 OR u.email = $2', [googleId, email]);
 
     if (!user) {
-      const insert = await pool.query(
+      await pool.query(
         `INSERT INTO users (email, name, google_id, role, status)
-         VALUES ($1, $2, $3, 'cs', 'pending')
-         RETURNING *`,
+         VALUES ($1, $2, $3, 'cs', 'pending')`,
         [email, name, googleId]
       );
-      user = insert.rows[0];
+      user = await findUserWithRole('u.email = $1', [email]);
     } else if (!user.google_id) {
-      const update = await pool.query(
-        'UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      await pool.query(
+        'UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2',
         [googleId, user.id]
       );
-      user = update.rows[0];
+      user = await findUserWithRole('u.id = $1', [user.id]);
     }
 
     if (user.status === 'pending') {
@@ -128,11 +133,11 @@ async function googleAuth(req, res, next) {
 
 async function me(req, res, next) {
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
-    if (result.rows.length === 0) {
+    const user = await findUserWithRole('u.id = $1', [req.user.id]);
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ user: sanitizeUser(result.rows[0]) });
+    res.json({ user: sanitizeUser(user) });
   } catch (err) {
     next(err);
   }
@@ -140,8 +145,7 @@ async function me(req, res, next) {
 
 async function refresh(req, res, next) {
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.id]);
-    const user = result.rows[0];
+    const user = await findUserWithRole('u.id = $1', [req.user.id]);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

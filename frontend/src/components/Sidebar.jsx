@@ -46,7 +46,7 @@ export default function Sidebar() {
 
       <nav className={`flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 py-2 ${collapsed ? 'px-2' : 'px-4'}`}>
         {navItems.map((item) => {
-          if (item.adminOnly && user?.role !== 'admin') return null;
+          if (item.adminOnly && !user?.isAdmin) return null;
           const Icon = item.icon;
           return (
             <div key={item.to} className="relative group">
@@ -80,7 +80,7 @@ export default function Sidebar() {
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
               <div className="text-[13px] font-semibold truncate text-gray-dark">{user?.name}</div>
-              <div className="text-[11px] text-secondary capitalize">{user?.role === 'admin' ? 'Admin' : 'CS Team'}</div>
+              <div className="text-[11px] text-secondary capitalize">{user?.roleLabel || (user?.isAdmin ? 'Admin' : 'CS Team')}</div>
             </div>
           )}
           <Tooltip label={user?.name || ''} show={collapsed} />

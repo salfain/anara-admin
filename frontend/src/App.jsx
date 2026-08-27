@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -10,8 +11,16 @@ import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import useAuthStore from './store/authStore';
 
 export default function App() {
+  const { token, refreshUser } = useAuthStore();
+
+  useEffect(() => {
+    if (token) refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

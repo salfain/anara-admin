@@ -33,6 +33,16 @@ const useAuthStore = create((set) => ({
     }
   },
 
+  refreshUser: async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      localStorage.setItem('anara_user', JSON.stringify(data.user));
+      set({ user: data.user });
+    } catch {
+      // token invalid/expired — leave to existing 401 handling elsewhere
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('anara_token');
     localStorage.removeItem('anara_user');

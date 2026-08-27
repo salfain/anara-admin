@@ -8,7 +8,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 
 export default function Packages() {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.isAdmin;
   const push = useToastStore((s) => s.push);
 
   const [files, setFiles] = useState([]);

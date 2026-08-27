@@ -85,7 +85,7 @@ export default function Dashboard() {
         >
           Buka Quick Replies
         </Link>
-        {user?.role === 'admin' && (
+        {user?.isAdmin && (
           <Link
             to="/analytics"
             className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold flex items-center cursor-pointer"

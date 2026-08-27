@@ -5,7 +5,7 @@ export default function ProtectedRoute({ children, adminOnly }) {
   const user = useAuthStore((s) => s.user);
 
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />;
+  if (adminOnly && !user.isAdmin) return <Navigate to="/" replace />;
 
   return children;
 }

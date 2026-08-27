@@ -39,7 +39,7 @@ export default function MobileMoreSheet({ open, onClose, overflowItems }) {
           </div>
           <div className="flex flex-col overflow-hidden">
             <div className="text-sm font-semibold truncate text-gray-dark">{user?.name}</div>
-            <div className="text-xs text-secondary capitalize">{user?.role === 'admin' ? 'Admin' : 'CS Team'}</div>
+            <div className="text-xs text-secondary capitalize">{user?.roleLabel || (user?.isAdmin ? 'Admin' : 'CS Team')}</div>
           </div>
         </div>
 

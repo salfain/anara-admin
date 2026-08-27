@@ -10,7 +10,7 @@ export default function MobileBottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
 
-  const visible = navItems.filter((item) => !item.adminOnly || user?.role === 'admin');
+  const visible = navItems.filter((item) => !item.adminOnly || user?.isAdmin);
   const primary = visible.slice(0, PRIMARY_COUNT);
   const overflow = visible.slice(PRIMARY_COUNT);
 

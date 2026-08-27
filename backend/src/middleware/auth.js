@@ -10,7 +10,7 @@ function authenticate(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: payload.sub, email: payload.email, role: payload.role };
+    req.user = { id: payload.sub, email: payload.email, role: payload.role, isAdmin: Boolean(payload.isAdmin) };
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });
@@ -18,7 +18,7 @@ function authenticate(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.user?.role !== 'admin') {
+  if (!req.user?.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
   }
   next();

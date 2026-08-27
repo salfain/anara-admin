@@ -11,6 +11,7 @@ const packageFilesRoutes = require('./routes/packageFiles');
 const followupTemplatesRoutes = require('./routes/followupTemplates');
 const activityRoutes = require('./routes/activity');
 const leadsRoutes = require('./routes/leads');
+const rolesRoutes = require('./routes/roles');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/package-files', packageFilesRoutes);
 app.use('/api/followup-templates', followupTemplatesRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/roles', rolesRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

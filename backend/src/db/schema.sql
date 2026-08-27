@@ -1,19 +1,36 @@
 -- Anara Quick Replies - Database Schema
 -- PostgreSQL
 
+CREATE TABLE IF NOT EXISTS roles (
+  key VARCHAR(30) PRIMARY KEY,
+  label VARCHAR(50) NOT NULL,
+  is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+  is_builtin BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO roles (key, label, is_admin, is_builtin) VALUES
+  ('cs', 'CS', FALSE, TRUE),
+  ('admin', 'Admin', TRUE, TRUE)
+ON CONFLICT (key) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255),
   name VARCHAR(255) NOT NULL,
   google_id VARCHAR(255) UNIQUE,
-  role VARCHAR(20) NOT NULL DEFAULT 'cs' CHECK (role IN ('cs', 'admin')),
+  role VARCHAR(30) NOT NULL DEFAULT 'cs' REFERENCES roles(key),
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active')),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(30);
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_fkey;
+ALTER TABLE users ADD CONSTRAINT users_role_fkey FOREIGN KEY (role) REFERENCES roles(key);
 
 CREATE TABLE IF NOT EXISTS packages (
   id SERIAL PRIMARY KEY,

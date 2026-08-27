@@ -12,7 +12,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 export default function QuickReplies() {
   const { user } = useAuthStore();
   const push = useToastStore((s) => s.push);
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.isAdmin;
 
   const [replies, setReplies] = useState([]);
   const [packages, setPackages] = useState([]);

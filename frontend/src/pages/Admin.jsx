@@ -57,6 +57,11 @@ function UsersTab({ currentUser }) {
   const [showInvite, setShowInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'cs', password: '' });
   const [inviting, setInviting] = useState(false);
+  const [roles, setRoles] = useState([]);
+
+  useEffect(() => {
+    api.get('/roles').then(({ data }) => setRoles(data.data)).catch(() => {});
+  }, []);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -184,9 +189,9 @@ function UsersTab({ currentUser }) {
                   <td className="text-sm px-4 py-3.5 border-b border-gray-med">
                     <span
                       className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={u.role === 'admin' ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' }}
+                      style={u.isAdmin ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' }}
                     >
-                      {u.role === 'admin' ? 'Admin' : 'CS'}
+                      {u.roleLabel || u.role}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 border-b border-gray-med">
@@ -347,8 +352,9 @@ function UsersTab({ currentUser }) {
                 onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
                 className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface"
               >
-                <option value="cs">CS</option>
-                <option value="admin">Admin</option>
+                {roles.map((r) => (
+                  <option key={r.key} value={r.key}>{r.label}</option>
+                ))}
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
@@ -378,30 +384,43 @@ function UsersTab({ currentUser }) {
 function RolesTab({ currentUser }) {
   const push = useToastStore((s) => s.push);
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
-  const fetchUsers = useCallback(async (showLoading = true) => {
+  const [newLabel, setNewLabel] = useState('');
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletingRole, setDeletingRole] = useState(false);
+
+  const fetchAll = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const { data } = await api.get('/users', { params: { limit: 100 } });
-      setUsers(data.data);
+      const [usersRes, rolesRes] = await Promise.all([
+        api.get('/users', { params: { limit: 100 } }),
+        api.get('/roles'),
+      ]);
+      setUsers(usersRes.data.data);
+      setRoles(rolesRes.data.data);
     } catch {
-      push('Gagal memuat users', 'error');
+      push('Gagal memuat data role', 'error');
     } finally {
       setLoading(false);
     }
   }, [push]);
 
-  useEffect(() => { fetchUsers(true); }, [fetchUsers]);
-  useAutoRefresh(() => fetchUsers(false), 15000);
+  useEffect(() => { fetchAll(true); }, [fetchAll]);
+  useAutoRefresh(() => fetchAll(false), 15000);
 
   async function handleRoleChange(u, role) {
     setUpdatingId(u.id);
     try {
       await api.put(`/users/${u.id}/role`, { role });
-      push(`${u.name} sekarang menjadi ${role === 'admin' ? 'Admin' : 'CS'}`);
-      fetchUsers(false);
+      const label = roles.find((r) => r.key === role)?.label || role;
+      push(`${u.name} sekarang menjadi ${label}`);
+      fetchAll(false);
     } catch (err) {
       push(err.response?.data?.error || 'Gagal mengubah role', 'error');
     } finally {
@@ -409,15 +428,63 @@ function RolesTab({ currentUser }) {
     }
   }
 
-  const admins = users.filter((u) => u.role === 'admin');
-  const csTeam = users.filter((u) => u.role === 'cs');
+  async function handleAddRole(e) {
+    e.preventDefault();
+    if (!newLabel.trim()) return setAddError('Nama role wajib diisi.');
+    setAdding(true);
+    try {
+      await api.post('/roles', { label: newLabel.trim(), isAdmin: newIsAdmin });
+      push('Role ditambahkan.');
+      setNewLabel('');
+      setNewIsAdmin(false);
+      setAddError('');
+      fetchAll(false);
+    } catch (err) {
+      setAddError(err.response?.data?.error || 'Gagal menambah role');
+    } finally {
+      setAdding(false);
+    }
+  }
 
-  function RoleColumn({ title, count, badgeStyle, list, targetRole, targetLabel }) {
+  async function handleDeleteRole() {
+    setDeletingRole(true);
+    try {
+      await api.delete(`/roles/${deleteTarget.key}`);
+      push('Role dihapus.');
+      setDeleteTarget(null);
+      fetchAll(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menghapus role', 'error');
+    } finally {
+      setDeletingRole(false);
+    }
+  }
+
+  function RoleColumn({ role }) {
+    const list = users.filter((u) => u.role === role.key);
+    const badgeStyle = role.isAdmin ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' };
+    const otherRoles = roles.filter((r) => r.key !== role.key);
+
     return (
       <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-med">
-          <div className="text-sm font-semibold text-gray-dark">{title}</div>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={badgeStyle}>{count}</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-med gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="text-sm font-semibold text-gray-dark truncate">{role.label}</div>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={badgeStyle}>{list.length}</span>
+          </div>
+          {role.isBuiltin ? (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary shrink-0">Bawaan</span>
+          ) : (
+            <button
+              onClick={() => setDeleteTarget(role)}
+              disabled={list.length > 0}
+              title={list.length > 0 ? 'Pindahkan usernya dulu sebelum menghapus role ini' : undefined}
+              className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer disabled:opacity-30 shrink-0"
+              style={{ background: '#ef4444' }}
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
         </div>
         <div className="flex flex-col divide-y divide-gray-med">
           {list.length === 0 && <div className="text-sm text-secondary text-center py-8">Belum ada user.</div>}
@@ -427,14 +494,21 @@ function RolesTab({ currentUser }) {
                 <div className="text-sm font-semibold text-gray-dark truncate">{u.name}</div>
                 <div className="text-xs text-secondary truncate">{u.email}</div>
               </div>
-              <button
-                onClick={() => handleRoleChange(u, targetRole)}
-                disabled={u.id === currentUser?.id || updatingId === u.id}
-                title={u.id === currentUser?.id ? 'Tidak bisa mengubah role sendiri' : undefined}
-                className="h-8 px-3 text-xs font-semibold border border-gray-med rounded-full btn-3d-secondary btn-3d-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-              >
-                {updatingId === u.id ? '...' : `Jadikan ${targetLabel}`}
-              </button>
+              {u.id === currentUser?.id ? (
+                <span className="text-xs text-secondary shrink-0" title="Tidak bisa mengubah role sendiri">Kamu</span>
+              ) : (
+                <select
+                  value=""
+                  onChange={(e) => e.target.value && handleRoleChange(u, e.target.value)}
+                  disabled={updatingId === u.id}
+                  className="h-8 px-2 text-xs font-semibold border border-gray-med rounded-full bg-surface cursor-pointer disabled:opacity-40 shrink-0"
+                >
+                  <option value="">{updatingId === u.id ? 'Menyimpan...' : 'Pindah ke...'}</option>
+                  {otherRoles.map((r) => (
+                    <option key={r.key} value={r.key}>{r.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
           ))}
         </div>
@@ -444,29 +518,46 @@ function RolesTab({ currentUser }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-sm text-secondary">Kelola siapa yang punya akses Admin dan siapa yang bertugas sebagai CS Team.</div>
+      <div className="text-sm text-secondary">Kelola role tim — siapa punya akses Admin, dan buat role tambahan sesuai kebutuhan.</div>
+
+      <form onSubmit={handleAddRole} className="bg-surface border border-gray-med rounded-xl p-5 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Nama Role Baru</label>
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder="e.g. Supervisor"
+            className="h-9 px-3 border border-gray-med rounded-lg text-sm"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-dark pb-2 cursor-pointer">
+          <input type="checkbox" checked={newIsAdmin} onChange={(e) => setNewIsAdmin(e.target.checked)} />
+          Punya akses Admin
+        </label>
+        <button type="submit" disabled={adding} className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+          {adding ? 'Menambah...' : 'Tambah Role'}
+        </button>
+        {addError && <div className="text-xs text-red-600 w-full">{addError}</div>}
+      </form>
+
       {loading ? (
         <div className="text-sm text-secondary text-center py-10">Memuat...</div>
       ) : (
         <div className="flex gap-4 flex-wrap items-start">
-          <RoleColumn
-            title="Admin"
-            count={admins.length}
-            badgeStyle={{ background: '#dbeafe', color: '#1e40af' }}
-            list={admins}
-            targetRole="cs"
-            targetLabel="CS"
-          />
-          <RoleColumn
-            title="CS Team"
-            count={csTeam.length}
-            badgeStyle={{ background: '#f1f5f9', color: '#475569' }}
-            list={csTeam}
-            targetRole="admin"
-            targetLabel="Admin"
-          />
+          {roles.map((role) => (
+            <RoleColumn key={role.key} role={role} />
+          ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus Role?"
+        message={`Role "${deleteTarget?.label}" akan dihapus permanen.`}
+        onConfirm={handleDeleteRole}
+        onCancel={() => setDeleteTarget(null)}
+        confirming={deletingRole}
+      />
     </div>
   );
 }

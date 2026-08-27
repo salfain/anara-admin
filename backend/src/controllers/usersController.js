@@ -3,8 +3,21 @@ const pool = require('../db/pool');
 const { logActivity } = require('./activityController');
 
 function sanitizeUser(user) {
-  const { password_hash, ...rest } = user;
-  return rest;
+  const { password_hash, is_admin, role_label, ...rest } = user;
+  return { ...rest, isAdmin: Boolean(is_admin), roleLabel: role_label || rest.role };
+}
+
+async function findUserWithRole(id) {
+  const result = await pool.query(
+    `SELECT u.*, r.is_admin, r.label AS role_label FROM users u LEFT JOIN roles r ON r.key = u.role WHERE u.id = $1`,
+    [id]
+  );
+  return result.rows[0];
+}
+
+async function isValidRole(role) {
+  const result = await pool.query('SELECT 1 FROM roles WHERE key = $1', [role]);
+  return result.rows.length > 0;
 }
 
 async function list(req, res, next) {
@@ -15,7 +28,7 @@ async function list(req, res, next) {
 
     if (search) {
       params.push(`%${search.toLowerCase()}%`);
-      conditions.push(`(LOWER(email) LIKE $${params.length} OR LOWER(name) LIKE $${params.length})`);
+      conditions.push(`(LOWER(u.email) LIKE $${params.length} OR LOWER(u.name) LIKE $${params.length})`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -23,12 +36,15 @@ async function list(req, res, next) {
     const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
     const offset = (pageNum - 1) * limitNum;
 
-    const countResult = await pool.query(`SELECT COUNT(*) FROM users ${where}`, params);
+    const countResult = await pool.query(`SELECT COUNT(*) FROM users u ${where}`, params);
     const total = parseInt(countResult.rows[0].count, 10);
 
     params.push(limitNum, offset);
     const result = await pool.query(
-      `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      `SELECT u.*, r.is_admin, r.label AS role_label FROM users u
+       LEFT JOIN roles r ON r.key = u.role
+       ${where}
+       ORDER BY u.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
 
@@ -58,8 +74,8 @@ async function invite(req, res, next) {
     if (!email || !name) {
       return res.status(400).json({ error: 'Email and name are required' });
     }
-    if (!['cs', 'admin'].includes(role)) {
-      return res.status(400).json({ error: 'Role must be cs or admin' });
+    if (!(await isValidRole(role))) {
+      return res.status(400).json({ error: 'Role tidak valid' });
     }
     if (!password || password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -72,14 +88,14 @@ async function invite(req, res, next) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const result = await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO users (email, password_hash, name, role)
        VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+       RETURNING id`,
       [email, passwordHash, name, role]
     );
 
-    const user = result.rows[0];
+    const user = await findUserWithRole(inserted.rows[0].id);
     await logActivity(req.user.id, 'invite', 'user', user.id, `mengundang user baru "${user.email}"`);
 
     res.status(201).json({ data: sanitizeUser(user) });
@@ -91,19 +107,19 @@ async function invite(req, res, next) {
 async function updateRole(req, res, next) {
   try {
     const { role } = req.body;
-    if (!['cs', 'admin'].includes(role)) {
-      return res.status(400).json({ error: 'Role must be cs or admin' });
+    if (!(await isValidRole(role))) {
+      return res.status(400).json({ error: 'Role tidak valid' });
     }
 
-    const result = await pool.query(
-      'UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    const updated = await pool.query(
+      'UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email',
       [role, req.params.id]
     );
-    if (result.rows.length === 0) {
+    if (updated.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const user = result.rows[0];
+    const user = await findUserWithRole(updated.rows[0].id);
     await logActivity(req.user.id, 'update_role', 'user', user.id, `mengubah role "${user.email}" menjadi ${role}`);
 
     res.json({ data: sanitizeUser(user) });
@@ -114,14 +130,14 @@ async function updateRole(req, res, next) {
 
 async function approve(req, res, next) {
   try {
-    const result = await pool.query(
-      `UPDATE users SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING *`,
+    const updated = await pool.query(
+      `UPDATE users SET status = 'active', updated_at = NOW() WHERE id = $1 RETURNING id`,
       [req.params.id]
     );
-    if (result.rows.length === 0) {
+    if (updated.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const user = result.rows[0];
+    const user = await findUserWithRole(updated.rows[0].id);
     await logActivity(req.user.id, 'approve', 'user', user.id, `menyetujui akun "${user.email}"`);
     res.json({ data: sanitizeUser(user) });
   } catch (err) {
