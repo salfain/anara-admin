@@ -26,6 +26,7 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [picFilter, setPicFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -64,11 +65,17 @@ export default function Leads() {
   const filtered = useMemo(() => {
     return leads.filter((l) => {
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+      if (picFilter !== 'all' && l.picSales !== picFilter) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return [l.whatsapp, l.picSales, l.notes, l.country].filter(Boolean).join(' ').toLowerCase().includes(q);
     });
-  }, [leads, search, statusFilter]);
+  }, [leads, search, statusFilter, picFilter]);
+
+  const picFilterOptions = useMemo(() => {
+    const fromLeads = leads.map((l) => l.picSales).filter(Boolean);
+    return [...new Set([...picOptions, ...fromLeads])].sort();
+  }, [leads, picOptions]);
 
   function openAdd() {
     setEditing(null);
@@ -163,6 +170,16 @@ export default function Leads() {
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
+        <select
+          value={picFilter}
+          onChange={(e) => setPicFilter(e.target.value)}
+          className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="all">Semua PIC Sales</option>
+          {picFilterOptions.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
@@ -170,6 +187,7 @@ export default function Leads() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-med bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                <th className="text-left px-4 py-3 whitespace-nowrap">No.</th>
                 <th className="text-left px-4 py-3 whitespace-nowrap">Tanggal Masuk</th>
                 <th className="text-left px-4 py-3 whitespace-nowrap">No. WhatsApp</th>
                 <th className="text-left px-4 py-3 whitespace-nowrap">PIC Sales</th>
@@ -184,15 +202,16 @@ export default function Leads() {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={10} className="text-center text-sm text-secondary py-10">Memuat...</td></tr>
+                <tr><td colSpan={11} className="text-center text-sm text-secondary py-10">Memuat...</td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={10} className="text-center text-sm text-secondary py-16">
-                  {search || statusFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
+                <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
+                  {search || statusFilter !== 'all' || picFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
                 </td></tr>
               )}
-              {!loading && filtered.map((l) => (
+              {!loading && filtered.map((l, idx) => (
                 <tr key={l.id} className="border-b border-gray-med last:border-b-0 hover:bg-gray-light/60">
+                  <td className="px-4 py-3 whitespace-nowrap text-secondary">{idx + 1}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-dark">{fmtDate(l.entryDate)}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-dark font-medium">{l.whatsapp}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-secondary">{l.picSales || '-'}</td>

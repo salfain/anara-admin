@@ -19,13 +19,17 @@ function toInputDate(value) {
   return String(value).slice(0, 10);
 }
 
+const CUSTOM_COUNTRY = '__custom__';
+
 export default function LeadModal({ open, onClose, onSubmit, initial, saving, picOptions = [], countryOptions = [] }) {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  const [customCountry, setCustomCountry] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (initial) {
+      const country = initial.country || '';
       setForm({
         entryDate: toInputDate(initial.entryDate),
         whatsapp: initial.whatsapp || '',
@@ -35,13 +39,15 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
         followUp1: toInputDate(initial.followUp1),
         followUp2: toInputDate(initial.followUp2),
         followUp3: toInputDate(initial.followUp3),
-        country: initial.country || '',
+        country,
       });
+      setCustomCountry(Boolean(country) && !countryOptions.includes(country));
     } else {
       setForm({ ...EMPTY, entryDate: new Date().toISOString().slice(0, 10) });
+      setCustomCountry(false);
     }
     setError('');
-  }, [open, initial]);
+  }, [open, initial, countryOptions]);
 
   if (!open) return null;
 
@@ -112,18 +118,43 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Negara</label>
-            <input
-              value={form.country}
-              onChange={(e) => set('country', e.target.value)}
-              placeholder="e.g. Jepang"
-              list="lead-country-options"
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
-            />
-            <datalist id="lead-country-options">
-              {countryOptions.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            {customCountry ? (
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  value={form.country}
+                  onChange={(e) => set('country', e.target.value)}
+                  placeholder="e.g. Jepang"
+                  className="h-10 px-3 border border-gray-med rounded-lg text-sm flex-1 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setCustomCountry(false); set('country', ''); }}
+                  className="h-10 px-3 bg-surface text-secondary border border-gray-med rounded-lg text-xs font-semibold cursor-pointer shrink-0"
+                >
+                  Pilih dari daftar
+                </button>
+              </div>
+            ) : (
+              <select
+                value={form.country}
+                onChange={(e) => {
+                  if (e.target.value === CUSTOM_COUNTRY) {
+                    setCustomCountry(true);
+                    set('country', '');
+                  } else {
+                    set('country', e.target.value);
+                  }
+                }}
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              >
+                <option value="">Pilih negara</option>
+                {countryOptions.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                <option value={CUSTOM_COUNTRY}>+ Negara lain (ketik manual)</option>
+              </select>
+            )}
           </div>
         </div>
 
