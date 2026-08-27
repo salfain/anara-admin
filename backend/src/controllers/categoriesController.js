@@ -32,6 +32,42 @@ async function create(req, res, next) {
   }
 }
 
+async function update(req, res, next) {
+  const client = await pool.connect();
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+    const trimmed = name.trim();
+
+    await client.query('BEGIN');
+
+    const duplicate = await client.query('SELECT id FROM categories WHERE name = $1 AND id != $2', [trimmed, req.params.id]);
+    if (duplicate.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Category already exists' });
+    }
+
+    const current = await client.query('SELECT * FROM categories WHERE id = $1', [req.params.id]);
+    if (current.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    const result = await client.query('UPDATE categories SET name = $1 WHERE id = $2 RETURNING *', [trimmed, req.params.id]);
+    await client.query('UPDATE quick_replies SET category = $1 WHERE category = $2', [trimmed, current.rows[0].name]);
+
+    await client.query('COMMIT');
+    res.json({ data: result.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+}
+
 async function remove(req, res, next) {
   try {
     const result = await pool.query('DELETE FROM categories WHERE id = $1 RETURNING id', [req.params.id]);
@@ -44,4 +80,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, remove };
+module.exports = { list, create, update, remove };

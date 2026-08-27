@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import api from '../api/client';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
@@ -393,6 +393,7 @@ function CategoriesTab() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const fetchCategories = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -409,18 +410,36 @@ function CategoriesTab() {
   useEffect(() => { fetchCategories(true); }, [fetchCategories]);
   useAutoRefresh(() => fetchCategories(false), 15000);
 
-  async function handleAdd(e) {
+  function startEdit(c) {
+    setEditing(c);
+    setName(c.name);
+    setError('');
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setName('');
+    setError('');
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim()) return setError('Nama kategori wajib diisi.');
     setSaving(true);
     try {
-      await api.post('/categories', { name: name.trim() });
+      if (editing) {
+        await api.put(`/categories/${editing.id}`, { name: name.trim() });
+        push('Kategori diperbarui.');
+      } else {
+        await api.post('/categories', { name: name.trim() });
+        push('Kategori ditambahkan.');
+      }
       setName('');
       setError('');
-      push('Kategori ditambahkan.');
+      setEditing(null);
       fetchCategories();
     } catch (err) {
-      setError(err.response?.data?.error || 'Gagal menambah kategori');
+      setError(err.response?.data?.error || 'Gagal menyimpan kategori');
     } finally {
       setSaving(false);
     }
@@ -442,8 +461,8 @@ function CategoriesTab() {
 
   return (
     <div className="flex gap-6 flex-wrap items-start">
-      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
-        <div className="text-base font-semibold text-gray-dark">Add Category</div>
+      <form onSubmit={handleSubmit} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+        <div className="text-base font-semibold text-gray-dark">{editing ? 'Edit Category' : 'Add Category'}</div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Category name *</label>
           <input
@@ -454,9 +473,16 @@ function CategoriesTab() {
           />
         </div>
         {error && <div className="text-xs text-red-600">{error}</div>}
-        <button type="submit" disabled={saving} className="h-9 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
-          {saving ? 'Menyimpan...' : 'Add Category'}
-        </button>
+        <div className="flex gap-2">
+          {editing && (
+            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              Cancel
+            </button>
+          )}
+          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+            {saving ? 'Menyimpan...' : editing ? 'Save' : 'Add Category'}
+          </button>
+        </div>
       </form>
 
       <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
@@ -477,7 +503,12 @@ function CategoriesTab() {
                 </td>
                 <td className="text-sm text-gray-dark px-4 py-3 border-b border-gray-med">{c.reply_count}</td>
                 <td className="px-4 py-3 border-b border-gray-med">
-                  <button onClick={() => setDeleteTarget(c)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => startEdit(c)} className="text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
+                      <Pencil size={12} /> Edit
+                    </button>
+                    <button onClick={() => setDeleteTarget(c)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -504,11 +535,13 @@ function PackagesTab() {
   const push = useToastStore((s) => s.push);
   const [packages, setPackages] = useState([]);
   const [name, setName] = useState('');
+  const [destination, setDestination] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const fetchPackages = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -525,18 +558,40 @@ function PackagesTab() {
   useEffect(() => { fetchPackages(true); }, [fetchPackages]);
   useAutoRefresh(() => fetchPackages(false), 15000);
 
-  async function handleAdd(e) {
+  function startEdit(p) {
+    setEditing(p);
+    setName(p.name);
+    setDestination(p.destination || '');
+    setError('');
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setName('');
+    setDestination('');
+    setError('');
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!name.trim()) return setError('Nama paket wajib diisi.');
     setSaving(true);
     try {
-      await api.post('/packages', { name: name.trim() });
+      const payload = { name: name.trim(), destination: destination.trim() || null };
+      if (editing) {
+        await api.put(`/packages/${editing.id}`, payload);
+        push('Paket diperbarui.');
+      } else {
+        await api.post('/packages', payload);
+        push('Paket ditambahkan.');
+      }
       setName('');
+      setDestination('');
       setError('');
-      push('Paket ditambahkan.');
+      setEditing(null);
       fetchPackages();
     } catch (err) {
-      setError(err.response?.data?.error || 'Gagal menambah paket');
+      setError(err.response?.data?.error || 'Gagal menyimpan paket');
     } finally {
       setSaving(false);
     }
@@ -558,44 +613,66 @@ function PackagesTab() {
 
   return (
     <div className="flex gap-6 flex-wrap items-start">
-      <form onSubmit={handleAdd} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
-        <div className="text-base font-semibold text-gray-dark">Add Package</div>
+      <form onSubmit={handleSubmit} className="w-[280px] shrink-0 bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+        <div className="text-base font-semibold text-gray-dark">{editing ? 'Edit Package' : 'Add Package'}</div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Package name *</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Paket Korea 6D5N"
+            className="h-9 px-3 border border-gray-med rounded-lg text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Destination (negara)</label>
+          <input
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
             placeholder="e.g. Korea"
             className="h-9 px-3 border border-gray-med rounded-lg text-sm"
           />
         </div>
         {error && <div className="text-xs text-red-600">{error}</div>}
-        <button type="submit" disabled={saving} className="h-9 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
-          {saving ? 'Menyimpan...' : 'Add Package'}
-        </button>
+        <div className="flex gap-2">
+          {editing && (
+            <button type="button" onClick={cancelEdit} className="h-9 flex-1 bg-surface text-gray-dark border border-gray-med rounded-lg text-sm font-semibold cursor-pointer">
+              Cancel
+            </button>
+          )}
+          <button type="submit" disabled={saving} className="h-9 flex-1 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
+            {saving ? 'Menyimpan...' : editing ? 'Save' : 'Add Package'}
+          </button>
+        </div>
       </form>
 
       <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {['Package', 'Actions'].map((h) => (
+              {['Package', 'Destination', 'Actions'].map((h) => (
                 <th key={h} className="text-xs font-semibold uppercase tracking-wide text-secondary text-left px-4 py-2.5 border-b border-gray-med">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={2} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
+            {loading && <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
             {!loading && packages.map((p) => (
               <tr key={p.id}>
                 <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-med">{p.name}</td>
+                <td className="text-sm text-secondary px-4 py-3 border-b border-gray-med">{p.destination || '-'}</td>
                 <td className="px-4 py-3 border-b border-gray-med">
-                  <button onClick={() => setDeleteTarget(p)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => startEdit(p)} className="text-[13px] font-medium cursor-pointer text-secondary flex items-center gap-1">
+                      <Pencil size={12} /> Edit
+                    </button>
+                    <button onClick={() => setDeleteTarget(p)} className="text-[13px] font-medium cursor-pointer" style={{ color: '#ef4444' }}>Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
             {!loading && packages.length === 0 && (
-              <tr><td colSpan={2} className="text-sm text-secondary text-center py-8">Belum ada paket.</td></tr>
+              <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Belum ada paket.</td></tr>
             )}
           </tbody>
         </table>
