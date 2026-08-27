@@ -96,6 +96,25 @@ CREATE TABLE IF NOT EXISTS followup_templates (
 
 CREATE INDEX IF NOT EXISTS idx_followup_templates_sort ON followup_templates(sort_order);
 
+CREATE TABLE IF NOT EXISTS leads (
+  id SERIAL PRIMARY KEY,
+  entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  whatsapp VARCHAR(30) NOT NULL,
+  pic_sales VARCHAR(100),
+  status VARCHAR(30) NOT NULL DEFAULT 'Baru',
+  notes TEXT,
+  follow_up_1 DATE,
+  follow_up_2 DATE,
+  follow_up_3 DATE,
+  country VARCHAR(100),
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+
 CREATE INDEX IF NOT EXISTS idx_quick_replies_category ON quick_replies(category);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_package_id ON quick_replies(package_id);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_tags ON quick_replies(tags);

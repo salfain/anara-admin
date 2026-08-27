@@ -4,6 +4,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import QuickReplies from './pages/QuickReplies';
 import FollowUpKit from './pages/FollowUpKit';
+import Leads from './pages/Leads';
 import Packages from './pages/Packages';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/quick-replies" element={<QuickReplies />} />
           <Route path="/follow-up-kit" element={<FollowUpKit />} />
+          <Route path="/leads" element={<Leads />} />
           <Route path="/packages" element={<Packages />} />
           <Route
             path="/analytics"
