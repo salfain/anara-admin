@@ -159,30 +159,36 @@ export default function QuickReplies() {
           </button>
         </div>
 
-        <div className="bg-surface border border-gray-med rounded-xl p-4 px-6 flex items-center gap-4 flex-wrap">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-secondary">Category</label>
-            <select
-              value={category}
-              onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-              className="h-9 px-3 border border-gray-med rounded-lg text-sm bg-gray-light min-w-[150px]"
-            >
-              <option value="">Semua Kategori</option>
-              {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
+        <div className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-4">
+            <div className="flex flex-col gap-1 min-w-0">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Category</label>
+              <select
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                className="h-9 px-3 border border-gray-med rounded-lg text-sm bg-gray-light w-full sm:w-auto sm:min-w-[170px]"
+              >
+                <option value="">Semua Kategori</option>
+                {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 min-w-0">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Package</label>
+              <select
+                value={packageId}
+                onChange={(e) => { setPackageId(e.target.value); setPage(1); }}
+                className="h-9 px-3 border border-gray-med rounded-lg text-sm bg-gray-light w-full sm:w-auto sm:min-w-[170px]"
+              >
+                <option value="">Semua Paket</option>
+                {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-secondary">Package</label>
-            <select
-              value={packageId}
-              onChange={(e) => { setPackageId(e.target.value); setPage(1); }}
-              className="h-9 px-3 border border-gray-med rounded-lg text-sm bg-gray-light min-w-[150px]"
-            >
-              <option value="">Semua Paket</option>
-              {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-          <button onClick={clearFilters} className="ml-auto h-9 px-4 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold self-end cursor-pointer">
+          <button
+            onClick={clearFilters}
+            disabled={!category && !packageId}
+            className="h-9 px-4 w-full sm:w-auto sm:ml-auto bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-[13px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          >
             Clear filters
           </button>
         </div>
