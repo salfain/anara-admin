@@ -5,6 +5,7 @@ import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import LeadModal, { LEAD_STATUSES } from '../components/LeadModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import LeadDetailSheet from '../components/LeadDetailSheet';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -48,6 +49,7 @@ export default function Leads() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
 
@@ -285,61 +287,44 @@ export default function Leads() {
             {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
           </div>
         )}
-        {!loading && filtered.map((l, idx) => (
-          <div key={l.id} className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col gap-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-dark truncate">{l.whatsapp}</div>
-                <div className="text-xs text-secondary mt-0.5">
-                  #{idx + 1} · Masuk {fmtDate(l.entryDate)}
-                </div>
-              </div>
-              <span
-                className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0"
-                style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
-              >
-                {l.status}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-              <div className="min-w-0">
-                <div className="text-secondary">PIC</div>
-                <div className="text-gray-dark truncate">{l.picSales || '-'}</div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-secondary">Negara</div>
-                <div className="text-gray-dark truncate">{l.country || '-'}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-[11px]">
-              <span className="text-secondary">Follow-up</span>
-              <div className="flex gap-1.5 flex-wrap">
-                {[l.followUp1, l.followUp2, l.followUp3].map((fu, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 rounded-full border border-gray-med text-gray-dark"
-                    style={{ opacity: fu ? 1 : 0.45 }}
-                  >
-                    FU{i + 1} {fmtDate(fu)}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {l.notes && <div className="text-xs text-secondary border-t border-gray-med pt-2">{l.notes}</div>}
-
-            <div className="flex justify-end gap-2 border-t border-gray-med pt-3">
-              <button onClick={() => openEdit(l)} className="h-8 px-3 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
-                <Pencil size={12} /> Edit
-              </button>
-              <button onClick={() => setDeleteTarget(l)} className="h-8 px-3 rounded-full btn-3d-danger btn-3d-sm text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer" style={{ background: '#ef4444' }}>
-                <Trash2 size={12} /> Hapus
-              </button>
-            </div>
+        {!loading && filtered.length > 0 && (
+          <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
+            {filtered.map((l, idx) => {
+              const doneCount = [l.followUp1, l.followUp2, l.followUp3].filter(Boolean).length;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => setDetailTarget({ lead: l, index: idx })}
+                  className="w-full text-left px-4 py-3 border-b border-gray-med last:border-b-0 flex flex-col gap-1 cursor-pointer active:bg-gray-light"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-gray-dark truncate min-w-0">{l.whatsapp}</div>
+                    <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                      style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
+                    >
+                      {l.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs text-secondary">
+                    <div className="truncate min-w-0">
+                      {[l.picSales, l.country, fmtDate(l.entryDate)].filter(Boolean).join(' · ')}
+                    </div>
+                    <div className="flex gap-1 shrink-0" title={`${doneCount} dari 3 follow-up`}>
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: i < doneCount ? '#2563eb' : 'var(--color-gray-med)' }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
 
       <div className="hidden lg:block bg-surface border border-gray-med rounded-xl overflow-x-auto">
@@ -415,6 +400,17 @@ export default function Leads() {
           </tbody>
         </table>
       </div>
+
+      <LeadDetailSheet
+        open={Boolean(detailTarget)}
+        lead={detailTarget?.lead}
+        index={detailTarget?.index}
+        statusStyle={STATUS_STYLE}
+        fmtDate={fmtDate}
+        onClose={() => setDetailTarget(null)}
+        onEdit={(l) => { setDetailTarget(null); openEdit(l); }}
+        onDelete={(l) => { setDetailTarget(null); setDeleteTarget(l); }}
+      />
 
       <LeadModal
         open={modalOpen}
