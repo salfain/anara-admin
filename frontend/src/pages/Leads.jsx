@@ -197,7 +197,7 @@ export default function Leads() {
             Rekap lead dan progres follow-up tim sales — dari lead masuk sampai closing.
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap shrink-0">
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto sm:shrink-0">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -227,7 +227,7 @@ export default function Leads() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
             type="text"
@@ -240,7 +240,7 @@ export default function Leads() {
         <select
           value={monthFilter}
           onChange={(e) => setMonthFilter(e.target.value)}
-          className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="h-10 px-3 flex-1 min-w-[140px] sm:flex-none border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           <option value="all">Semua Bulan</option>
           {monthFilterOptions.map((key) => (
@@ -250,7 +250,7 @@ export default function Leads() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="h-10 px-3 flex-1 min-w-[140px] sm:flex-none border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           <option value="all">Semua Status</option>
           {LEAD_STATUSES.map((s) => (
@@ -260,7 +260,7 @@ export default function Leads() {
         <select
           value={picFilter}
           onChange={(e) => setPicFilter(e.target.value)}
-          className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="h-10 px-3 flex-1 min-w-[140px] sm:flex-none border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           <option value="all">Semua PIC Sales</option>
           {picFilterOptions.map((p) => (
@@ -275,8 +275,8 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
-        <table className="w-full text-xs table-fixed">
+      <div className="bg-surface border border-gray-med rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[900px] text-xs table-fixed">
           <colgroup>
             <col className="w-[3%]" />
             <col className="w-[8%]" />

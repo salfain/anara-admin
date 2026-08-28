@@ -18,38 +18,56 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-gray-med flex items-stretch"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex justify-center px-3 pointer-events-none"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
       >
-        {primary.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium"
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={20} color={isActive ? '#2563eb' : 'var(--color-secondary)'} />
-                  <span className="truncate max-w-full px-1" style={{ color: isActive ? '#2563eb' : 'var(--color-secondary)' }}>
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          );
-        })}
-        <button
-          onClick={() => setMoreOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium cursor-pointer"
+        <nav
+          className="pointer-events-auto flex items-center gap-1 rounded-full border border-gray-med px-1.5 py-1.5 shadow-lg backdrop-blur-md max-w-full overflow-x-auto bg-surface/95"
         >
-          <Menu size={20} color={isOverflowActive ? '#2563eb' : 'var(--color-secondary)'} />
-          <span style={{ color: isOverflowActive ? '#2563eb' : 'var(--color-secondary)' }}>Lainnya</span>
-        </button>
-      </nav>
+          {primary.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold whitespace-nowrap transition-colors"
+              >
+                {({ isActive }) => (
+                  <span
+                    className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5"
+                    style={{
+                      background: isActive ? 'var(--color-primary)' : 'transparent',
+                      color: isActive ? '#ffffff' : 'var(--color-secondary)',
+                    }}
+                  >
+                    <Icon size={18} color={isActive ? '#ffffff' : 'var(--color-secondary)'} />
+                    <span className="truncate max-w-[90px]" style={{ fontWeight: isActive ? 700 : 500 }}>
+                      {item.label}
+                    </span>
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[12px] font-semibold cursor-pointer whitespace-nowrap"
+          >
+            <span
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5"
+              style={{
+                background: isOverflowActive ? 'var(--color-primary)' : 'transparent',
+                color: isOverflowActive ? '#ffffff' : 'var(--color-secondary)',
+              }}
+            >
+              <Menu size={18} color={isOverflowActive ? '#ffffff' : 'var(--color-secondary)'} />
+              <span style={{ fontWeight: isOverflowActive ? 700 : 500 }}>Lainnya</span>
+            </span>
+          </button>
+        </nav>
+      </div>
 
       <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} overflowItems={overflow} />
     </>
