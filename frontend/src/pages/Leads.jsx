@@ -199,27 +199,32 @@ export default function Leads() {
             Rekap lead dan progres follow-up tim sales — dari lead masuk sampai closing.
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap w-full sm:w-auto sm:shrink-0">
+        {/* Import/Export shrink to icons below sm so all three fit one row. */}
+        <div className="flex gap-2 items-center w-full sm:w-auto sm:shrink-0">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            title="Import Excel"
+            aria-label="Import Excel"
+            className="h-10 w-10 sm:w-auto sm:px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
           >
             <Upload size={16} />
-            {importing ? 'Mengimport...' : 'Import Excel'}
+            <span className="hidden sm:inline">{importing ? 'Mengimport...' : 'Import Excel'}</span>
           </button>
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            title="Export Excel"
+            aria-label="Export Excel"
+            className="h-10 w-10 sm:w-auto sm:px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
           >
             <Download size={16} />
-            {exporting ? 'Menyiapkan...' : 'Export Excel'}
+            <span className="hidden sm:inline">{exporting ? 'Menyiapkan...' : 'Export Excel'}</span>
           </button>
           <button
             onClick={openAdd}
-            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            className="h-10 px-5 flex-1 sm:flex-none text-white rounded-full btn-3d text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
             style={{ background: '#2563eb' }}
           >
             <Plus size={16} />
