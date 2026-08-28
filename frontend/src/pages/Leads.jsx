@@ -275,7 +275,74 @@ export default function Leads() {
         </div>
       )}
 
-      <div className="bg-surface border border-gray-med rounded-xl overflow-x-auto">
+      {/* Mobile: stacked cards. An 11-column table is unreadable at phone width. */}
+      <div className="lg:hidden flex flex-col gap-3">
+        {loading && (
+          <div className="bg-surface border border-gray-med rounded-xl py-10 text-center text-sm text-secondary">Memuat...</div>
+        )}
+        {!loading && filtered.length === 0 && (
+          <div className="bg-surface border border-gray-med rounded-xl py-12 text-center text-sm text-secondary">
+            {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
+          </div>
+        )}
+        {!loading && filtered.map((l, idx) => (
+          <div key={l.id} className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-dark truncate">{l.whatsapp}</div>
+                <div className="text-xs text-secondary mt-0.5">
+                  #{idx + 1} · Masuk {fmtDate(l.entryDate)}
+                </div>
+              </div>
+              <span
+                className="text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
+              >
+                {l.status}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+              <div className="min-w-0">
+                <div className="text-secondary">PIC</div>
+                <div className="text-gray-dark truncate">{l.picSales || '-'}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-secondary">Negara</div>
+                <div className="text-gray-dark truncate">{l.country || '-'}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="text-secondary">Follow-up</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {[l.followUp1, l.followUp2, l.followUp3].map((fu, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 rounded-full border border-gray-med text-gray-dark"
+                    style={{ opacity: fu ? 1 : 0.45 }}
+                  >
+                    FU{i + 1} {fmtDate(fu)}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {l.notes && <div className="text-xs text-secondary border-t border-gray-med pt-2">{l.notes}</div>}
+
+            <div className="flex justify-end gap-2 border-t border-gray-med pt-3">
+              <button onClick={() => openEdit(l)} className="h-8 px-3 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <Pencil size={12} /> Edit
+              </button>
+              <button onClick={() => setDeleteTarget(l)} className="h-8 px-3 rounded-full btn-3d-danger btn-3d-sm text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer" style={{ background: '#ef4444' }}>
+                <Trash2 size={12} /> Hapus
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden lg:block bg-surface border border-gray-med rounded-xl overflow-x-auto">
         <table className="w-full min-w-[900px] text-xs table-fixed">
           <colgroup>
             <col className="w-[3%]" />
@@ -291,7 +358,7 @@ export default function Leads() {
             <col className="w-[8%]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-gray-med bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary">
+            <tr className="border-b border-gray-med bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary sticky top-0 z-10">
               <th className="text-left px-2 py-2.5">No.</th>
               <th className="text-left px-2 py-2.5">Masuk</th>
               <th className="text-left px-2 py-2.5">No. WhatsApp</th>

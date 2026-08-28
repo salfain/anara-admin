@@ -79,7 +79,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               type="date"
               value={form.entryDate}
               onChange={(e) => set('entryDate', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -88,7 +88,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               value={form.whatsapp}
               onChange={(e) => set('whatsapp', e.target.value)}
               placeholder="e.g. 628123456789"
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -96,7 +96,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
             <select
               value={form.picSales}
               onChange={(e) => set('picSales', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               <option value="">Pilih CS</option>
               {(form.picSales && !picOptions.includes(form.picSales) ? [form.picSales, ...picOptions] : picOptions).map((name) => (
@@ -109,7 +109,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
             <select
               value={form.status}
               onChange={(e) => set('status', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             >
               {LEAD_STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -125,7 +125,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
                   value={form.country}
                   onChange={(e) => set('country', e.target.value)}
                   placeholder="e.g. Jepang"
-                  className="h-10 px-3 border border-gray-med rounded-lg text-sm flex-1 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  className="h-10 px-3 border border-gray-med rounded-lg text-sm flex-1 bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
                 <button
                   type="button"
@@ -146,7 +146,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
                     set('country', e.target.value);
                   }
                 }}
-                className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
                 <option value="">Pilih negara</option>
                 {countryOptions.map((c) => (
@@ -165,7 +165,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               type="date"
               value={form.followUp1}
               onChange={(e) => set('followUp1', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -174,7 +174,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               type="date"
               value={form.followUp2}
               onChange={(e) => set('followUp2', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -183,7 +183,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               type="date"
               value={form.followUp3}
               onChange={(e) => set('followUp3', e.target.value)}
-              className="h-10 px-3 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
             onChange={(e) => set('notes', e.target.value)}
             rows={3}
             placeholder="Catatan minat, budget, dsb."
-            className="px-3 py-2 border border-gray-med rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 resize-none"
+            className="px-3 py-2 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 resize-none"
           />
         </div>
 

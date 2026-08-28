@@ -15,12 +15,27 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+:root {
+  color-scheme: light;
+}
+
 .dark {
   --color-secondary: #94a3b8;
   --color-gray-light: #0f172a;
   --color-gray-med: #334155;
   --color-gray-dark: #f1f5f9;
   --color-surface: #1e293b;
+  /* Makes the browser render native widgets (select popups, date pickers,
+     scrollbars) dark. Without it the popup is white while option text
+     inherits a light color, leaving the options unreadable. */
+  color-scheme: dark;
+}
+
+/* Safari/Firefox don't always inherit color-scheme into the option list. */
+.dark select option,
+.dark select optgroup {
+  background-color: var(--color-surface);
+  color: var(--color-gray-dark);
 }
 
 html, body, #root {
