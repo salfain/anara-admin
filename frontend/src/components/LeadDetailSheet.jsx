@@ -1,4 +1,4 @@
-import { X, Pencil, Trash2 } from 'lucide-react';
+import { X, Pencil, Trash2, Send } from 'lucide-react';
 
 function Row({ label, value }) {
   return (
@@ -9,7 +9,7 @@ function Row({ label, value }) {
   );
 }
 
-export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDate, canManage, onClose, onEdit, onDelete }) {
+export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDate, canManage, onClose, onEdit, onDelete, onSend }) {
   if (!open || !lead) return null;
 
   const followUps = [lead.followUp1, lead.followUp2, lead.followUp3];
@@ -43,7 +43,7 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
 
         <div className="px-5 py-2">
           <Row label="PIC Sales" value={lead.picSales} />
-          <Row label="Negara" value={lead.country} />
+          <Row label="Destinasi" value={lead.country} />
           <Row label="Follow-up 1" value={fmtDate(lead.followUp1)} />
           <Row label="Follow-up 2" value={fmtDate(lead.followUp2)} />
           <Row label="Follow-up 3" value={fmtDate(lead.followUp3)} />
@@ -62,6 +62,15 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
           </div>
         )}
 
+        <div className="px-5 pt-4 flex">
+          <button
+            onClick={() => onSend(lead)}
+            className="flex-1 h-10 rounded-full btn-3d text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+            style={{ background: '#25D366' }}
+          >
+            <Send size={14} /> Kirim Follow-Up
+          </button>
+        </div>
         {canManage && (
           <div className="px-5 py-4 flex gap-2">
             <button

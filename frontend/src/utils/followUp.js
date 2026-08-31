@@ -49,3 +49,28 @@ export const FOLLOW_UP_LABEL = {
   ok: 'Aman',
   closed: 'Selesai',
 };
+
+const FU_SLOTS = ['followUp1', 'followUp2', 'followUp3'];
+
+const toDay = (v) => (v ? String(v).slice(0, 10) : '');
+
+/**
+ * Catat follow-up hari ini di slot FU kosong berikutnya. Kalau ketiganya sudah
+ * terpakai, geser ke kiri supaya yang tersimpan selalu tiga kontak terakhir —
+ * tanggal tertua yang terbuang, karena itu yang paling tidak berguna.
+ */
+export function withFollowUpToday(lead, today = new Date().toISOString().slice(0, 10)) {
+  const empty = FU_SLOTS.find((f) => !lead[f]);
+  if (empty) return { ...lead, [empty]: today };
+  return {
+    ...lead,
+    followUp1: toDay(lead.followUp2),
+    followUp2: toDay(lead.followUp3),
+    followUp3: today,
+  };
+}
+
+/** Apakah pencatatan berikutnya akan membuang tanggal tertua. */
+export function willShiftFollowUps(lead) {
+  return FU_SLOTS.every((f) => Boolean(lead[f]));
+}

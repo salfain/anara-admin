@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, Download, Send } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -9,7 +9,11 @@ import LeadDetailSheet from '../components/LeadDetailSheet';
 import usePermissions from '../hooks/usePermissions';
 import Skeleton, { SkeletonRows } from '../components/Skeleton';
 import EditableCell from '../components/EditableCell';
-import { followUpState, daysSinceContact, DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS } from '../utils/followUp';
+import {
+  followUpState, daysSinceContact, withFollowUpToday, willShiftFollowUps,
+  DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS,
+} from '../utils/followUp';
+import SendFollowUpModal from '../components/SendFollowUpModal';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -93,6 +97,8 @@ export default function Leads() {
   const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
+  const [sendTarget, setSendTarget] = useState(null);
+  const [marking, setMarking] = useState(false);
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [rowBusy, setRowBusy] = useState(null);
 
@@ -288,6 +294,21 @@ export default function Leads() {
     setLeads((prev) => [data.data, ...prev]);
   }
 
+  async function handleMarkFollowedUp(lead) {
+    setMarking(true);
+    try {
+      const shifted = willShiftFollowUps(lead);
+      const { data } = await api.put(`/leads/${lead.id}`, toPayload(withFollowUpToday(lead)));
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? data.data : l)));
+      setSendTarget(data.data);
+      push(shifted ? 'Dicatat. FU paling lama digeser keluar.' : 'Follow-up hari ini dicatat.');
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal mencatat follow-up', 'error');
+    } finally {
+      setMarking(false);
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -387,7 +408,7 @@ export default function Leads() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nomor WA, PIC, negara, catatan..."
+            placeholder="Cari nomor WA, PIC, destinasi, catatan..."
             className="w-full h-10 pl-9 pr-3 border border-gray-med rounded-lg text-sm bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
@@ -505,7 +526,7 @@ export default function Leads() {
               <th className="text-left px-2 py-2.5">No. WhatsApp</th>
               <th className="text-left px-2 py-2.5">PIC</th>
               <th className="text-left px-2 py-2.5">Status</th>
-              <th className="text-left px-2 py-2.5">Negara</th>
+              <th className="text-left px-2 py-2.5">Destinasi</th>
               <th className="text-left px-2 py-2.5">FU 1</th>
               <th className="text-left px-2 py-2.5">FU 2</th>
               <th className="text-left px-2 py-2.5">FU 3</th>
@@ -573,6 +594,14 @@ export default function Leads() {
                   {cell('notes', { className: 'text-secondary', display: l.notes || '-' })}
                   <td className="px-2 py-2">
                     <div className="flex justify-end gap-1">
+                      <button
+                        title="Kirim follow-up via WhatsApp"
+                        onClick={() => setSendTarget(l)}
+                        className="w-6 h-6 rounded-full btn-3d btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0"
+                        style={{ background: '#25D366' }}
+                      >
+                        <Send size={11} />
+                      </button>
                       {canManage ? (
                         <>
                           <button title="Buka form lengkap" onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
@@ -582,9 +611,7 @@ export default function Leads() {
                             <Trash2 size={11} />
                           </button>
                         </>
-                      ) : (
-                        <span className="text-secondary text-xs">-</span>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -602,6 +629,15 @@ export default function Leads() {
         </table>
       </div>
 
+      <SendFollowUpModal
+        open={Boolean(sendTarget)}
+        lead={sendTarget}
+        canManage={canManage}
+        marking={marking}
+        onClose={() => setSendTarget(null)}
+        onMarkFollowedUp={() => handleMarkFollowedUp(sendTarget)}
+      />
+
       <LeadDetailSheet
         open={Boolean(detailTarget)}
         lead={detailTarget?.lead}
@@ -610,6 +646,7 @@ export default function Leads() {
         fmtDate={fmtDate}
         onClose={() => setDetailTarget(null)}
         canManage={canManage}
+        onSend={(l) => { setDetailTarget(null); setSendTarget(l); }}
         onEdit={(l) => { setDetailTarget(null); openEdit(l); }}
         onDelete={(l) => { setDetailTarget(null); setDeleteTarget(l); }}
       />
@@ -710,7 +747,7 @@ function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
         </select>
       </td>
       <td className="px-1 py-1">
-        <input value={row.country} onChange={set('country')} onKeyDown={onKeyDown} list="new-lead-country" placeholder="Negara" className={input} />
+        <input value={row.country} onChange={set('country')} onKeyDown={onKeyDown} list="new-lead-country" placeholder="Destinasi" className={input} />
         <datalist id="new-lead-country">{countryOptions.map((o) => <option key={o} value={o} />)}</datalist>
       </td>
       <td className="px-1 py-1"><input type="date" value={row.followUp1} onChange={set('followUp1')} onKeyDown={onKeyDown} className={input} /></td>

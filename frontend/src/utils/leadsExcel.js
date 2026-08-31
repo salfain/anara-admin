@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 
 const EXPORT_HEADERS = [
-  'Tanggal Masuk', 'Nomor WhatsApp', 'PIC Sales', 'Status', 'Negara', 'FU 1', 'FU 2', 'FU 3', 'Notes',
+  'Tanggal Masuk', 'Nomor WhatsApp', 'PIC Sales', 'Status', 'Destinasi', 'FU 1', 'FU 2', 'FU 3', 'Notes',
 ];
 
 const HEADER_ALIASES = {
@@ -25,6 +25,10 @@ const HEADER_ALIASES = {
   'fu2': 'followUp2',
   'fu 3': 'followUp3',
   'fu3': 'followUp3',
+  // Kolomnya berisi destinasi paket, bukan negara. Label lama tetap diterima
+  // supaya file lama masih bisa diimport.
+  'destinasi': 'country',
+  'destination': 'country',
   'negara': 'country',
   'country': 'country',
 };

@@ -117,7 +117,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Negara</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Destinasi</label>
             {customCountry ? (
               <div className="flex gap-2">
                 <input
@@ -148,11 +148,11 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
                 }}
                 className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               >
-                <option value="">Pilih negara</option>
+                <option value="">Pilih destinasi</option>
                 {countryOptions.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
-                <option value={CUSTOM_COUNTRY}>+ Negara lain (ketik manual)</option>
+                <option value={CUSTOM_COUNTRY}>+ Destinasi lain (ketik manual)</option>
               </select>
             )}
           </div>

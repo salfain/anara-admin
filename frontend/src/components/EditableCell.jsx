@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
  *
  * `type` picks the editor: a plain input, a date picker, a fixed dropdown
  * (`select`), or a free-text field with suggestions (`combo`) for columns like
- * PIC and Negara where the known values are a starting point, not a limit.
+ * PIC and Destinasi where the known values are a starting point, not a limit.
  */
 export default function EditableCell({
   value,
