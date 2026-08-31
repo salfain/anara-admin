@@ -9,7 +9,7 @@ function Row({ label, value }) {
   );
 }
 
-export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDate, onClose, onEdit, onDelete }) {
+export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDate, canManage, onClose, onEdit, onDelete }) {
   if (!open || !lead) return null;
 
   const followUps = [lead.followUp1, lead.followUp2, lead.followUp3];
@@ -62,21 +62,23 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
           </div>
         )}
 
-        <div className="px-5 py-4 flex gap-2">
-          <button
-            onClick={() => onEdit(lead)}
-            className="flex-1 h-10 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Pencil size={14} /> Edit
-          </button>
-          <button
-            onClick={() => onDelete(lead)}
-            className="flex-1 h-10 rounded-full btn-3d-danger text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
-            style={{ background: '#ef4444' }}
-          >
-            <Trash2 size={14} /> Hapus
-          </button>
-        </div>
+        {canManage && (
+          <div className="px-5 py-4 flex gap-2">
+            <button
+              onClick={() => onEdit(lead)}
+              className="flex-1 h-10 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Pencil size={14} /> Edit
+            </button>
+            <button
+              onClick={() => onDelete(lead)}
+              className="flex-1 h-10 rounded-full btn-3d-danger text-white text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+              style={{ background: '#ef4444' }}
+            >
+              <Trash2 size={14} /> Hapus
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Search, Copy, Check, Plus, Pencil, Trash2 } from 'lucide-react';
 import api from '../api/client';
-import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import FollowUpTemplateModal from '../components/FollowUpTemplateModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { CADENCE } from '../data/followUpTemplates';
+import usePermissions from '../hooks/usePermissions';
 
 function highlight(text) {
   const parts = text.split(/(\[[^\]]+\])/g);
@@ -55,7 +55,7 @@ function CopyButton({ text, small }) {
   );
 }
 
-function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
+function TemplateCard({ template, canManage, onEdit, onDelete }) {
   const [variantIndex, setVariantIndex] = useState(0);
 
   return (
@@ -83,7 +83,7 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
                 {template.tag}
               </span>
             )}
-            {isAdmin && (
+            {canManage && (
               <div className="flex gap-1.5">
                 <button onClick={() => onEdit(template)} className="w-7 h-7 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer">
                   <Pencil size={12} />
@@ -157,8 +157,8 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }) {
 }
 
 export default function FollowUpKit() {
-  const { user } = useAuthStore();
-  const isAdmin = user?.isAdmin;
+  const { can } = usePermissions();
+  const canManage = can('follow_up.manage');
   const push = useToastStore((s) => s.push);
 
   const [search, setSearch] = useState('');
@@ -254,7 +254,7 @@ export default function FollowUpKit() {
             Ganti bagian bertanda <span style={{ color: '#2563eb', fontWeight: 600 }}>[dalam kurung]</span> sebelum dikirim.
           </div>
         </div>
-        {isAdmin && (
+        {canManage && (
           <button
             onClick={openAdd}
             className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
@@ -317,7 +317,7 @@ export default function FollowUpKit() {
           </div>
         )}
         {!loading && filtered.map((t) => (
-          <TemplateCard key={t.id} template={t} isAdmin={isAdmin} onEdit={openEdit} onDelete={setDeleteTarget} />
+          <TemplateCard key={t.id} template={t} canManage={canManage} onEdit={openEdit} onDelete={setDeleteTarget} />
         ))}
       </div>
 

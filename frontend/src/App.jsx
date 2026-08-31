@@ -34,14 +34,42 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
-          <Route path="/quick-replies" element={<QuickReplies />} />
-          <Route path="/follow-up-kit" element={<FollowUpKit />} />
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/packages" element={<Packages />} />
+          <Route
+            path="/quick-replies"
+            element={
+              <ProtectedRoute permission="quick_replies.view">
+                <QuickReplies />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/follow-up-kit"
+            element={
+              <ProtectedRoute permission="follow_up.view">
+                <FollowUpKit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leads"
+            element={
+              <ProtectedRoute permission="leads.view">
+                <Leads />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/packages"
+            element={
+              <ProtectedRoute permission="packages.view">
+                <Packages />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/analytics"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute permission="analytics.view">
                 <Analytics />
               </ProtectedRoute>
             }
@@ -49,7 +77,7 @@ export default function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute adminOnly>
+              <ProtectedRoute>
                 <Admin />
               </ProtectedRoute>
             }

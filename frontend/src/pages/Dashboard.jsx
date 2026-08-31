@@ -5,6 +5,7 @@ import api from '../api/client';
 import useAuthStore from '../store/authStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import useThemeStore from '../store/themeStore';
+import usePermissions from '../hooks/usePermissions';
 
 const STATUS_COLORS = {
   Baru: '#2563eb',
@@ -23,6 +24,7 @@ function shortMonthLabel(key) {
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const { can } = usePermissions();
   const theme = useThemeStore((s) => s.theme);
   const tickColor = theme === 'dark' ? '#f1f5f9' : '#111827';
   const [stats, setStats] = useState(null);
@@ -85,7 +87,7 @@ export default function Dashboard() {
         >
           Buka Quick Replies
         </Link>
-        {user?.isAdmin && (
+        {can('analytics.view') && (
           <Link
             to="/analytics"
             className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold flex items-center cursor-pointer"

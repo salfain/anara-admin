@@ -4,13 +4,14 @@ import { Menu } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { navItems, PRIMARY_COUNT } from '../data/navItems';
 import MobileMoreSheet from './MobileMoreSheet';
+import { canSeeNavItem } from '../hooks/usePermissions';
 
 export default function MobileBottomNav() {
   const { user } = useAuthStore();
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
 
-  const visible = navItems.filter((item) => !item.adminOnly || user?.isAdmin);
+  const visible = navItems.filter((item) => canSeeNavItem(user, item));
   const primary = visible.slice(0, PRIMARY_COUNT);
   const overflow = visible.slice(PRIMARY_COUNT);
 

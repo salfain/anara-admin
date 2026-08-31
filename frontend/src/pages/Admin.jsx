@@ -5,17 +5,33 @@ import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
+import usePermissions from '../hooks/usePermissions';
 
 const TABS = [
-  { key: 'users', label: 'Users' },
-  { key: 'roles', label: 'Roles' },
-  { key: 'categories', label: 'Categories' },
-  { key: 'packages', label: 'Packages' },
+  { key: 'users', label: 'Users', permission: 'admin.users' },
+  { key: 'roles', label: 'Roles', permission: 'admin.roles' },
+  { key: 'permissions', label: 'Hak Akses', permission: 'admin.permissions' },
+  { key: 'categories', label: 'Categories', permission: 'admin.categories' },
+  { key: 'packages', label: 'Packages', permission: 'packages.manage' },
 ];
 
 export default function Admin() {
   const { user: currentUser } = useAuthStore();
-  const [tab, setTab] = useState('users');
+  const { can } = usePermissions();
+  const visibleTabs = TABS.filter((t) => can(t.permission));
+  const [tab, setTab] = useState(visibleTabs[0]?.key || null);
+
+  if (visibleTabs.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="bg-surface border border-gray-med rounded-xl p-8 text-center text-sm text-secondary">
+          Kamu tidak punya hak akses ke Admin Panel.
+        </div>
+      </div>
+    );
+  }
+
+  const activeTab = visibleTabs.some((t) => t.key === tab) ? tab : visibleTabs[0].key;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
@@ -24,23 +40,24 @@ export default function Admin() {
         <div className="text-sm text-secondary mt-1">Kelola anggota tim, kategori, paket, dan pantau aktivitas</div>
       </div>
 
-      <div className="flex gap-1 bg-surface rounded-xl p-1.5 w-fit border border-gray-med">
-        {TABS.map((t) => (
+      <div className="flex gap-1 bg-surface rounded-xl p-1.5 w-fit border border-gray-med flex-wrap">
+        {visibleTabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer ${tab === t.key ? 'btn-3d-sm btn-3d' : ''}`}
-            style={tab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: 'var(--color-secondary)' }}
+            className={`h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer ${activeTab === t.key ? 'btn-3d-sm btn-3d' : ''}`}
+            style={activeTab === t.key ? { background: '#2563eb', color: '#fff' } : { background: 'transparent', color: 'var(--color-secondary)' }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'users' && <UsersTab currentUser={currentUser} />}
-      {tab === 'roles' && <RolesTab currentUser={currentUser} />}
-      {tab === 'categories' && <CategoriesTab />}
-      {tab === 'packages' && <PackagesTab />}
+      {activeTab === 'users' && <UsersTab currentUser={currentUser} />}
+      {activeTab === 'roles' && <RolesTab currentUser={currentUser} />}
+      {activeTab === 'permissions' && <PermissionsTab currentUser={currentUser} />}
+      {activeTab === 'categories' && <CategoriesTab />}
+      {activeTab === 'packages' && <PackagesTab />}
     </div>
   );
 }
@@ -352,9 +369,11 @@ function UsersTab({ currentUser }) {
                 onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
                 className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface"
               >
-                {roles.map((r) => (
-                  <option key={r.key} value={r.key}>{r.label}</option>
-                ))}
+                {roles
+                  .filter((r) => currentUser?.isAdmin || !r.isAdmin)
+                  .map((r) => (
+                    <option key={r.key} value={r.key}>{r.label}</option>
+                  ))}
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-2">
@@ -390,6 +409,8 @@ function RolesTab({ currentUser }) {
 
   const [newLabel, setNewLabel] = useState('');
   const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [newPermissions, setNewPermissions] = useState([]);
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -398,12 +419,14 @@ function RolesTab({ currentUser }) {
   const fetchAll = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const [usersRes, rolesRes] = await Promise.all([
+      const [usersRes, rolesRes, catalogRes] = await Promise.all([
         api.get('/users', { params: { limit: 100 } }),
         api.get('/roles'),
+        api.get('/roles/permissions/catalog'),
       ]);
       setUsers(usersRes.data.data);
       setRoles(rolesRes.data.data);
+      setGroups(catalogRes.data.data);
     } catch {
       push('Gagal memuat data role', 'error');
     } finally {
@@ -433,10 +456,15 @@ function RolesTab({ currentUser }) {
     if (!newLabel.trim()) return setAddError('Nama role wajib diisi.');
     setAdding(true);
     try {
-      await api.post('/roles', { label: newLabel.trim(), isAdmin: newIsAdmin });
+      await api.post('/roles', {
+        label: newLabel.trim(),
+        isAdmin: newIsAdmin,
+        permissions: newIsAdmin ? [] : newPermissions,
+      });
       push('Role ditambahkan.');
       setNewLabel('');
       setNewIsAdmin(false);
+      setNewPermissions([]);
       setAddError('');
       fetchAll(false);
     } catch (err) {
@@ -460,16 +488,23 @@ function RolesTab({ currentUser }) {
     }
   }
 
+  function toggleNewPermission(key) {
+    setNewPermissions((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
   function RoleColumn({ role }) {
     const list = users.filter((u) => u.role === role.key);
     const badgeStyle = role.isAdmin ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' };
-    const otherRoles = roles.filter((r) => r.key !== role.key);
+    const otherRoles = roles.filter((r) => r.key !== role.key && (currentUser?.isAdmin || !r.isAdmin));
 
     return (
       <div className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-med gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="text-sm font-semibold text-gray-dark truncate">{role.label}</div>
+            <div className="text-[11px] text-secondary">
+              {role.isAdmin ? 'Semua hak akses' : `${role.permissions.length} hak akses`}
+            </div>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={badgeStyle}>{list.length}</span>
           </div>
           {role.isBuiltin ? (
@@ -530,13 +565,55 @@ function RolesTab({ currentUser }) {
             className="h-9 px-3 border border-gray-med rounded-lg text-sm"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-dark pb-2 cursor-pointer">
-          <input type="checkbox" checked={newIsAdmin} onChange={(e) => setNewIsAdmin(e.target.checked)} />
-          Punya akses Admin
+        <label
+          className="flex items-center gap-2 text-sm text-gray-dark pb-2 cursor-pointer"
+          title={currentUser?.isAdmin ? undefined : 'Hanya Admin yang bisa membuat role dengan akses Admin'}
+        >
+          <input
+            type="checkbox"
+            checked={newIsAdmin}
+            disabled={!currentUser?.isAdmin}
+            onChange={(e) => setNewIsAdmin(e.target.checked)}
+          />
+          <span className={currentUser?.isAdmin ? '' : 'opacity-60'}>Punya akses Admin</span>
         </label>
         <button type="submit" disabled={adding} className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60" style={{ background: '#2563eb' }}>
           {adding ? 'Menambah...' : 'Tambah Role'}
         </button>
+
+        {!newIsAdmin && groups.length > 0 && (
+          <div className="w-full flex flex-col gap-2 pt-2 border-t border-gray-med">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-dark">
+              Hak Akses Awal
+              <span className="ml-2 font-normal normal-case text-secondary">
+                (bisa diubah kapan saja di tab Hak Akses)
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {groups.map((group) => (
+                <div key={group.key} className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                  <span className="text-xs font-semibold text-secondary w-32 shrink-0">{group.label}</span>
+                  {group.permissions.map((perm) => (
+                    <label key={perm.key} className="flex items-center gap-1.5 text-[13px] text-gray-dark cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newPermissions.includes(perm.key)}
+                        onChange={() => toggleNewPermission(perm.key)}
+                      />
+                      {perm.label}
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {newIsAdmin && (
+          <div className="w-full text-xs text-secondary">
+            Role dengan akses Admin otomatis punya semua hak akses.
+          </div>
+        )}
+
         {addError && <div className="text-xs text-red-600 w-full">{addError}</div>}
       </form>
 
@@ -558,6 +635,188 @@ function RolesTab({ currentUser }) {
         onCancel={() => setDeleteTarget(null)}
         confirming={deletingRole}
       />
+    </div>
+  );
+}
+
+function PermissionsTab({ currentUser }) {
+  const push = useToastStore((s) => s.push);
+  const [groups, setGroups] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [selectedKey, setSelectedKey] = useState(null);
+  const [draft, setDraft] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [catalogRes, rolesRes] = await Promise.all([
+        api.get('/roles/permissions/catalog'),
+        api.get('/roles'),
+      ]);
+      setGroups(catalogRes.data.data);
+      setRoles(rolesRes.data.data);
+      setSelectedKey((prev) => prev || rolesRes.data.data[0]?.key || null);
+    } catch {
+      push('Gagal memuat hak akses', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const selected = roles.find((r) => r.key === selectedKey) || null;
+
+  // Reset draft setiap kali role yang dipilih (atau datanya) berganti.
+  useEffect(() => {
+    setDraft(selected ? [...selected.permissions] : []);
+  }, [selectedKey, selected?.permissions?.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Role sendiri dikunci: kalau tidak, siapa pun yang boleh mengelola hak akses
+  // bisa memberi dirinya sendiri akses apa pun. Backend menolaknya juga.
+  const isOwnRole = Boolean(selected && selected.key === currentUser?.role && !currentUser?.isAdmin);
+  const locked = Boolean(selected?.isAdmin) || isOwnRole;
+  const dirty = selected
+    ? [...draft].sort().join(',') !== [...selected.permissions].sort().join(',')
+    : false;
+
+  function toggle(key) {
+    if (locked) return;
+    setDraft((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
+  function toggleGroup(group, checked) {
+    if (locked) return;
+    const keys = group.permissions.map((p) => p.key);
+    setDraft((prev) => (checked ? [...new Set([...prev, ...keys])] : prev.filter((k) => !keys.includes(k))));
+  }
+
+  async function handleSave() {
+    if (!selected || locked) return;
+    setSaving(true);
+    try {
+      await api.put(`/roles/${selected.key}/permissions`, { permissions: draft });
+      push(`Hak akses ${selected.label} disimpan.`);
+      fetchAll();
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menyimpan hak akses', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="text-sm text-secondary text-center py-10">Memuat...</div>;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-sm text-secondary">
+        Pilih role, lalu centang fitur apa saja yang boleh diakses. Role dengan akses Admin selalu punya semua hak akses.
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="w-full lg:w-64 bg-surface border border-gray-med rounded-xl overflow-hidden shrink-0">
+          <div className="px-4 py-3 border-b border-gray-med text-xs font-semibold uppercase tracking-wide text-gray-dark">
+            Role
+          </div>
+          <div className="flex flex-col">
+            {roles.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setSelectedKey(r.key)}
+                className="flex items-center justify-between gap-2 px-4 py-3 text-left border-b border-gray-med last:border-b-0 cursor-pointer"
+                style={selectedKey === r.key ? { background: '#dbeafe' } : undefined}
+              >
+                <span className="text-sm font-semibold text-gray-dark truncate">{r.label}</span>
+                <span className="text-[11px] text-secondary shrink-0">
+                  {r.isAdmin ? 'Semua' : `${r.permissions.length} akses`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 w-full flex flex-col gap-4">
+          {!selected ? (
+            <div className="text-sm text-secondary">Belum ada role.</div>
+          ) : (
+            <>
+              {selected.isAdmin && (
+                <div className="text-xs rounded-lg px-4 py-3" style={{ background: '#dbeafe', color: '#1e40af' }}>
+                  Role &quot;{selected.label}&quot; punya akses Admin, jadi semua hak akses aktif dan tidak bisa diubah.
+                </div>
+              )}
+              {isOwnRole && !selected.isAdmin && (
+                <div className="text-xs rounded-lg px-4 py-3" style={{ background: '#fef3c7', color: '#92400e' }}>
+                  Ini role kamu sendiri, jadi hak aksesnya tidak bisa kamu ubah. Minta Admin untuk mengubahnya.
+                </div>
+              )}
+
+              {groups.map((group) => {
+                const keys = group.permissions.map((p) => p.key);
+                const allOn = keys.every((k) => draft.includes(k));
+                return (
+                  <div key={group.key} className="bg-surface border border-gray-med rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-gray-med">
+                      <div className="text-sm font-semibold text-gray-dark">{group.label}</div>
+                      <label className="flex items-center gap-2 text-xs text-secondary cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allOn}
+                          disabled={locked}
+                          onChange={(e) => toggleGroup(group, e.target.checked)}
+                        />
+                        Pilih semua
+                      </label>
+                    </div>
+                    <div className="flex flex-col">
+                      {group.permissions.map((perm) => (
+                        <label
+                          key={perm.key}
+                          className="flex items-center gap-3 px-5 py-3 border-b border-gray-med last:border-b-0 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={draft.includes(perm.key)}
+                            disabled={locked}
+                            onChange={() => toggle(perm.key)}
+                          />
+                          <span className="flex flex-col">
+                            <span className="text-sm text-gray-dark">{perm.label}</span>
+                            <span className="text-[11px] text-secondary">{perm.key}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={locked || !dirty || saving}
+                  className="h-9 px-5 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60"
+                  style={{ background: '#2563eb' }}
+                >
+                  {saving ? 'Menyimpan...' : 'Simpan Hak Akses'}
+                </button>
+                {dirty && !locked && (
+                  <button
+                    onClick={() => setDraft([...selected.permissions])}
+                    className="h-9 px-4 bg-surface border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold text-gray-dark cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

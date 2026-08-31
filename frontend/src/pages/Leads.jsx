@@ -6,6 +6,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import LeadModal, { LEAD_STATUSES } from '../components/LeadModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LeadDetailSheet from '../components/LeadDetailSheet';
+import usePermissions from '../hooks/usePermissions';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -48,6 +49,8 @@ export default function Leads() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const { can } = usePermissions();
+  const canManage = can('leads.manage');
   const [deleting, setDeleting] = useState(false);
   const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
@@ -202,16 +205,18 @@ export default function Leads() {
         {/* Import/Export shrink to icons below sm so all three fit one row. */}
         <div className="flex gap-2 items-center w-full sm:w-auto sm:shrink-0">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            title="Import Excel"
-            aria-label="Import Excel"
-            className="h-10 w-10 sm:w-auto sm:px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
-          >
-            <Upload size={16} />
-            <span className="hidden sm:inline">{importing ? 'Mengimport...' : 'Import Excel'}</span>
-          </button>
+          {canManage && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              title="Import Excel"
+              aria-label="Import Excel"
+              className="h-10 w-10 sm:w-auto sm:px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
+            >
+              <Upload size={16} />
+              <span className="hidden sm:inline">{importing ? 'Mengimport...' : 'Import Excel'}</span>
+            </button>
+          )}
           <button
             onClick={handleExport}
             disabled={exporting}
@@ -222,14 +227,16 @@ export default function Leads() {
             <Download size={16} />
             <span className="hidden sm:inline">{exporting ? 'Menyiapkan...' : 'Export Excel'}</span>
           </button>
-          <button
-            onClick={openAdd}
-            className="h-10 px-5 flex-1 sm:flex-none text-white rounded-full btn-3d text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
-            style={{ background: '#2563eb' }}
-          >
-            <Plus size={16} />
-            Tambah Lead
-          </button>
+          {canManage && (
+            <button
+              onClick={openAdd}
+              className="h-10 px-5 flex-1 sm:flex-none text-white rounded-full btn-3d text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
+              style={{ background: '#2563eb' }}
+            >
+              <Plus size={16} />
+              Tambah Lead
+            </button>
+          )}
         </div>
       </div>
 
@@ -392,12 +399,18 @@ export default function Leads() {
                 <td className="px-2 py-2 text-secondary truncate" title={l.notes || ''}>{l.notes || '-'}</td>
                 <td className="px-2 py-2">
                   <div className="flex justify-end gap-1">
-                    <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
-                      <Pencil size={11} />
-                    </button>
-                    <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0" style={{ background: '#ef4444' }}>
-                      <Trash2 size={11} />
-                    </button>
+                    {canManage ? (
+                      <>
+                        <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
+                          <Pencil size={11} />
+                        </button>
+                        <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0" style={{ background: '#ef4444' }}>
+                          <Trash2 size={11} />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-secondary text-xs">-</span>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -413,6 +426,7 @@ export default function Leads() {
         statusStyle={STATUS_STYLE}
         fmtDate={fmtDate}
         onClose={() => setDetailTarget(null)}
+        canManage={canManage}
         onEdit={(l) => { setDetailTarget(null); openEdit(l); }}
         onDelete={(l) => { setDetailTarget(null); setDeleteTarget(l); }}
       />

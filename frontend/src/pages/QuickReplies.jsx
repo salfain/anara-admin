@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Plus } from 'lucide-react';
 import api from '../api/client';
-import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ReplyCard from '../components/ReplyCard';
 import ReplyModal from '../components/ReplyModal';
 import ReplyDetailModal from '../components/ReplyDetailModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
+import usePermissions from '../hooks/usePermissions';
 
 export default function QuickReplies() {
-  const { user } = useAuthStore();
   const push = useToastStore((s) => s.push);
-  const isAdmin = user?.isAdmin;
+  const { can } = usePermissions();
+  const canManage = can('quick_replies.manage');
+  const canDelete = can('quick_replies.delete');
 
   const [replies, setReplies] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -149,14 +150,16 @@ export default function QuickReplies() {
             <div className="text-2xl sm:text-[28px] font-bold text-gray-dark leading-tight">Quick Replies</div>
             <div className="text-sm text-secondary mt-1">Cari, salin, dan kelola template jawaban customer</div>
           </div>
-          <button
-            onClick={openAdd}
-            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
-            style={{ background: '#2563eb' }}
-          >
-            <Plus size={16} />
-            Tambah Reply
-          </button>
+          {canManage && (
+            <button
+              onClick={openAdd}
+              className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer shrink-0"
+              style={{ background: '#2563eb' }}
+            >
+              <Plus size={16} />
+              Tambah Reply
+            </button>
+          )}
         </div>
 
         <div className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
@@ -216,7 +219,8 @@ export default function QuickReplies() {
             <ReplyCard
               key={reply.id}
               reply={reply}
-              isAdmin={isAdmin}
+              canEdit={canManage}
+              canDelete={canDelete}
               onCopy={handleCopy}
               onEdit={openEdit}
               onDelete={setDeleteTarget}

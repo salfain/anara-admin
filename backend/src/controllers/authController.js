@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const pool = require('../db/pool');
+const { loadPermissions } = require('../middleware/auth');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -13,9 +14,18 @@ function signToken(user) {
   );
 }
 
-function sanitizeUser(user) {
+function sanitizeUser(user, permissions) {
   const { password_hash, is_admin, role_label, ...rest } = user;
-  return { ...rest, isAdmin: Boolean(is_admin), roleLabel: role_label || rest.role };
+  return {
+    ...rest,
+    isAdmin: Boolean(is_admin),
+    roleLabel: role_label || rest.role,
+    permissions: permissions || [],
+  };
+}
+
+function userPermissions(user) {
+  return loadPermissions({ role: user.role, isAdmin: Boolean(user.is_admin) });
 }
 
 async function findUserWithRole(where, params) {
@@ -83,7 +93,7 @@ async function login(req, res, next) {
     }
 
     const token = signToken(user);
-    res.json({ token, user: sanitizeUser(user) });
+    res.json({ token, user: sanitizeUser(user, await userPermissions(user)) });
   } catch (err) {
     next(err);
   }
@@ -125,7 +135,7 @@ async function googleAuth(req, res, next) {
     }
 
     const token = signToken(user);
-    res.json({ token, user: sanitizeUser(user) });
+    res.json({ token, user: sanitizeUser(user, await userPermissions(user)) });
   } catch (err) {
     next(err);
   }
@@ -137,7 +147,7 @@ async function me(req, res, next) {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ user: sanitizeUser(user) });
+    res.json({ user: sanitizeUser(user, await userPermissions(user)) });
   } catch (err) {
     next(err);
   }

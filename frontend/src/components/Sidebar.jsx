@@ -6,6 +6,7 @@ import useSidebarStore from '../store/sidebarStore';
 import { navItems } from '../data/navItems';
 import InstallPwaButton from './InstallPwaButton';
 import AnaraLogo from './AnaraLogo';
+import { canSeeNavItem } from '../hooks/usePermissions';
 
 function Tooltip({ label, show }) {
   if (!show) return null;
@@ -46,7 +47,7 @@ export default function Sidebar() {
 
       <nav className={`flex-1 min-h-0 overflow-y-auto flex flex-col gap-1 py-2 ${collapsed ? 'px-2' : 'px-4'}`}>
         {navItems.map((item) => {
-          if (item.adminOnly && !user?.isAdmin) return null;
+          if (!canSeeNavItem(user, item)) return null;
           const Icon = item.icon;
           return (
             <div key={item.to} className="relative group">

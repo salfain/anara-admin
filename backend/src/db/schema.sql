@@ -32,6 +32,30 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_fkey;
 ALTER TABLE users ADD CONSTRAINT users_role_fkey FOREIGN KEY (role) REFERENCES roles(key);
 
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_key VARCHAR(30) NOT NULL REFERENCES roles(key) ON DELETE CASCADE,
+  permission_key VARCHAR(60) NOT NULL,
+  PRIMARY KEY (role_key, permission_key)
+);
+
+-- Hak akses bawaan untuk setiap role non-admin yang belum punya baris sama sekali
+-- (role CS bawaan, dan role custom yang dibuat sebelum fitur hak akses ada).
+-- Hanya jalan sekali per role: begitu admin menyesuaikannya, migrate ulang tidak menimpanya.
+-- Role dengan is_admin otomatis punya semua hak akses, jadi tidak perlu baris.
+INSERT INTO role_permissions (role_key, permission_key)
+SELECT r.key, p
+FROM roles r
+CROSS JOIN unnest(ARRAY[
+  'quick_replies.view',
+  'quick_replies.manage',
+  'follow_up.view',
+  'leads.view',
+  'leads.manage',
+  'packages.view'
+]) AS p
+WHERE r.is_admin = FALSE
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_key = r.key);
+
 CREATE TABLE IF NOT EXISTS packages (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,

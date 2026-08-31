@@ -1,6 +1,6 @@
 import { Copy, Pencil, Trash2 } from 'lucide-react';
 
-export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, onView }) {
+export default function ReplyCard({ reply, canEdit, canDelete, onCopy, onEdit, onDelete, onView }) {
   function stop(e, fn) {
     e.stopPropagation();
     fn();
@@ -22,13 +22,15 @@ export default function ReplyCard({ reply, isAdmin, onCopy, onEdit, onDelete, on
             <Copy size={14} />
             Copy
           </button>
-          <button
-            onClick={(e) => stop(e, () => onEdit(reply))}
-            className="w-8 h-8 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer"
-          >
-            <Pencil size={14} />
-          </button>
-          {isAdmin && (
+          {canEdit && (
+            <button
+              onClick={(e) => stop(e, () => onEdit(reply))}
+              className="w-8 h-8 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+          {canDelete && (
             <button
               onClick={(e) => stop(e, () => onDelete(reply))}
               className="w-8 h-8 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer"

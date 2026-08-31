@@ -15,9 +15,9 @@ async function findUserWithRole(id) {
   return result.rows[0];
 }
 
-async function isValidRole(role) {
-  const result = await pool.query('SELECT 1 FROM roles WHERE key = $1', [role]);
-  return result.rows.length > 0;
+async function findRole(role) {
+  const result = await pool.query('SELECT * FROM roles WHERE key = $1', [role]);
+  return result.rows[0];
 }
 
 async function list(req, res, next) {
@@ -74,8 +74,14 @@ async function invite(req, res, next) {
     if (!email || !name) {
       return res.status(400).json({ error: 'Email and name are required' });
     }
-    if (!(await isValidRole(role))) {
+    const targetRole = await findRole(role);
+    if (!targetRole) {
       return res.status(400).json({ error: 'Role tidak valid' });
+    }
+    // Hanya admin sungguhan yang boleh menaikkan orang ke role ber-akses Admin —
+    // tanpa ini, siapa pun dengan hak akses "Kelola user" bisa mengangkat admin baru.
+    if (targetRole.is_admin && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Hanya Admin yang bisa memberikan role dengan akses Admin' });
     }
     if (!password || password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
@@ -107,8 +113,19 @@ async function invite(req, res, next) {
 async function updateRole(req, res, next) {
   try {
     const { role } = req.body;
-    if (!(await isValidRole(role))) {
+    // Mencegah self-escalation: kalau boleh mengubah role sendiri, siapa pun dengan
+    // hak akses "Kelola user" bisa mengangkat dirinya jadi Admin.
+    if (String(req.params.id) === String(req.user.id)) {
+      return res.status(400).json({ error: 'Tidak bisa mengubah role sendiri' });
+    }
+    const targetRole = await findRole(role);
+    if (!targetRole) {
       return res.status(400).json({ error: 'Role tidak valid' });
+    }
+    // Hanya admin sungguhan yang boleh menaikkan orang ke role ber-akses Admin —
+    // tanpa ini, siapa pun dengan hak akses "Kelola user" bisa mengangkat admin baru.
+    if (targetRole.is_admin && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Hanya Admin yang bisa memberikan role dengan akses Admin' });
     }
 
     const updated = await pool.query(

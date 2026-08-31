@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Upload, Eye, Download, Trash2 } from 'lucide-react';
 import api from '../api/client';
-import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
+import usePermissions from '../hooks/usePermissions';
 
 export default function Packages() {
-  const { user } = useAuthStore();
-  const isAdmin = user?.isAdmin;
+  const { can } = usePermissions();
+  const canManage = can('packages.manage');
   const push = useToastStore((s) => s.push);
 
   const [files, setFiles] = useState([]);
@@ -115,14 +115,16 @@ export default function Packages() {
           <div className="text-[28px] font-bold text-gray-dark">Paket & Itinerary</div>
           <div className="text-sm text-secondary mt-1">Kelola file itinerary dan price list per paket</div>
         </div>
-        <button
-          onClick={openModal}
-          className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
-          style={{ background: '#2563eb' }}
-        >
-          <Upload size={16} />
-          Upload File
-        </button>
+        {canManage && (
+          <button
+            onClick={openModal}
+            className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
+            style={{ background: '#2563eb' }}
+          >
+            <Upload size={16} />
+            Upload File
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -161,7 +163,7 @@ export default function Packages() {
                 <Download size={13} />
                 Download
               </button>
-              {isAdmin && (
+              {canManage && (
                 <button
                   onClick={() => setDeleteTarget(f)}
                   className="h-8 px-3 rounded-full btn-3d-danger btn-3d-sm text-white text-[13px] font-medium flex items-center gap-1.5 cursor-pointer"
