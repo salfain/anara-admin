@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LeadDetailSheet from '../components/LeadDetailSheet';
 import usePermissions from '../hooks/usePermissions';
 import Skeleton, { SkeletonRows } from '../components/Skeleton';
+import EditableCell from '../components/EditableCell';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -28,6 +29,36 @@ const STATUS_STYLE = {
   'Sudah DP': { background: '#f0fdf4', color: '#15803d' },
   Batal: { background: '#fef2f2', color: '#dc2626' },
 };
+
+// Kolom yang bisa disunting langsung di tabel, berurutan sesuai tampilan —
+// urutan ini juga yang dipakai tombol Tab untuk berpindah antar sel.
+const EDITABLE_FIELDS = [
+  'entryDate', 'whatsapp', 'picSales', 'status', 'country',
+  'followUp1', 'followUp2', 'followUp3', 'notes',
+];
+
+const DATE_FIELDS = new Set(['entryDate', 'followUp1', 'followUp2', 'followUp3']);
+
+function toInputDate(value) {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+
+// PUT /leads/:id mengganti seluruh baris, jadi sunting satu sel tetap
+// mengirim baris utuh dengan satu kolom yang berubah.
+function toPayload(lead) {
+  return {
+    entryDate: toInputDate(lead.entryDate),
+    whatsapp: lead.whatsapp || '',
+    picSales: lead.picSales || null,
+    status: lead.status || 'Baru',
+    notes: lead.notes || null,
+    followUp1: toInputDate(lead.followUp1) || null,
+    followUp2: toInputDate(lead.followUp2) || null,
+    followUp3: toInputDate(lead.followUp3) || null,
+    country: lead.country || null,
+  };
+}
 
 function fmtDate(value) {
   if (!value) return '-';
@@ -56,6 +87,8 @@ export default function Leads() {
   const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
+  const [editingCell, setEditingCell] = useState(null); // { id, field }
+  const [rowBusy, setRowBusy] = useState(null);
 
   const fetchLeads = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -70,7 +103,8 @@ export default function Leads() {
   }, [push]);
 
   useEffect(() => { fetchLeads(true); }, [fetchLeads]);
-  useAutoRefresh(() => fetchLeads(false), 15000);
+  // Auto-refresh would yank the row out from under an open editor mid-keystroke.
+  useAutoRefresh(() => { if (!editingCell) fetchLeads(false); }, 15000, [editingCell]);
 
   useEffect(() => {
     api.get('/users/simple')
@@ -178,6 +212,59 @@ export default function Leads() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function moveEdit(lead, field, dir) {
+    const i = EDITABLE_FIELDS.indexOf(field);
+    const next = EDITABLE_FIELDS[i + dir];
+    if (next) setEditingCell({ id: lead.id, field: next });
+    else setEditingCell(null);
+  }
+
+  async function commitCell(lead, field, rawValue, opts) {
+    const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+    const current = DATE_FIELDS.has(field) ? toInputDate(lead[field]) : String(lead[field] ?? '');
+
+    if (value === current) {
+      setEditingCell(null);
+      opts?.then?.();
+      return;
+    }
+    if (field === 'entryDate' && !value) return push('Tanggal masuk wajib diisi', 'error');
+    if (field === 'whatsapp' && !value) return push('Nomor WhatsApp wajib diisi', 'error');
+
+    const updated = { ...lead, [field]: value || null };
+    setEditingCell(null);
+    opts?.then?.();
+    // Show the new value straight away; the request is a formality the user
+    // should not have to watch.
+    setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
+    setRowBusy(lead.id);
+    try {
+      const { data } = await api.put(`/leads/${lead.id}`, { ...toPayload(lead), [field]: value || null });
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? data.data : l)));
+    } catch (err) {
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
+      push(err.response?.data?.error || 'Gagal menyimpan perubahan', 'error');
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  async function handleInlineCreate(row) {
+    const payload = {
+      entryDate: row.entryDate,
+      whatsapp: row.whatsapp.trim(),
+      picSales: row.picSales.trim() || null,
+      status: row.status,
+      notes: row.notes.trim() || null,
+      followUp1: row.followUp1 || null,
+      followUp2: row.followUp2 || null,
+      followUp3: row.followUp3 || null,
+      country: row.country.trim() || null,
+    };
+    const { data } = await api.post('/leads', payload);
+    setLeads((prev) => [data.data, ...prev]);
   }
 
   async function handleDelete() {
@@ -381,43 +468,75 @@ export default function Leads() {
                 {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
               </td></tr>
             )}
-            {!loading && filtered.map((l, idx) => (
-              <tr key={l.id} className="border-b border-gray-med last:border-b-0 hover:bg-gray-light/60">
-                <td className="px-2 py-2 text-secondary truncate">{idx + 1}</td>
-                <td className="px-2 py-2 text-gray-dark truncate" title={fmtDate(l.entryDate)}>{fmtDate(l.entryDate)}</td>
-                <td className="px-2 py-2 text-gray-dark font-medium truncate" title={l.whatsapp}>{l.whatsapp}</td>
-                <td className="px-2 py-2 text-secondary truncate" title={l.picSales || ''}>{l.picSales || '-'}</td>
-                <td className="px-2 py-2 truncate">
-                  <span
-                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                    style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
-                  >
-                    {l.status}
-                  </span>
-                </td>
-                <td className="px-2 py-2 text-secondary truncate" title={l.country || ''}>{l.country || '-'}</td>
-                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp1)}</td>
-                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp2)}</td>
-                <td className="px-2 py-2 text-secondary truncate">{fmtDate(l.followUp3)}</td>
-                <td className="px-2 py-2 text-secondary truncate" title={l.notes || ''}>{l.notes || '-'}</td>
-                <td className="px-2 py-2">
-                  <div className="flex justify-end gap-1">
-                    {canManage ? (
-                      <>
-                        <button onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
-                          <Pencil size={11} />
-                        </button>
-                        <button onClick={() => setDeleteTarget(l)} className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0" style={{ background: '#ef4444' }}>
-                          <Trash2 size={11} />
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-secondary text-xs">-</span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {!loading && filtered.map((l, idx) => {
+              const cell = (field, props) => (
+                <EditableCell
+                  {...props}
+                  value={DATE_FIELDS.has(field) ? toInputDate(l[field]) : l[field] || ''}
+                  editing={editingCell?.id === l.id && editingCell?.field === field}
+                  disabled={!canManage}
+                  onStartEdit={() => setEditingCell({ id: l.id, field })}
+                  onCancel={() => setEditingCell(null)}
+                  onCommit={(v, opts) => commitCell(l, field, v, opts)}
+                  onTab={(dir) => moveEdit(l, field, dir)}
+                />
+              );
+
+              return (
+                <tr key={l.id} className={`border-b border-gray-med last:border-b-0 hover:bg-gray-light/60 ${rowBusy === l.id ? 'opacity-60' : ''}`}>
+                  <td className="px-2 py-2 text-secondary truncate">{idx + 1}</td>
+                  {cell('entryDate', { type: 'date', className: 'text-gray-dark', display: fmtDate(l.entryDate) })}
+                  {cell('whatsapp', { className: 'text-gray-dark font-medium', display: l.whatsapp })}
+                  {cell('picSales', {
+                    type: 'combo', options: picFilterOptions, listId: `pic-${l.id}`,
+                    className: 'text-secondary', display: l.picSales || '-',
+                  })}
+                  {cell('status', {
+                    type: 'select', options: LEAD_STATUSES,
+                    display: (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                        style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
+                      >
+                        {l.status}
+                      </span>
+                    ),
+                  })}
+                  {cell('country', {
+                    type: 'combo', options: countryOptions, listId: `country-${l.id}`,
+                    className: 'text-secondary', display: l.country || '-',
+                  })}
+                  {cell('followUp1', { type: 'date', className: 'text-secondary', display: fmtDate(l.followUp1) })}
+                  {cell('followUp2', { type: 'date', className: 'text-secondary', display: fmtDate(l.followUp2) })}
+                  {cell('followUp3', { type: 'date', className: 'text-secondary', display: fmtDate(l.followUp3) })}
+                  {cell('notes', { className: 'text-secondary', display: l.notes || '-' })}
+                  <td className="px-2 py-2">
+                    <div className="flex justify-end gap-1">
+                      {canManage ? (
+                        <>
+                          <button title="Buka form lengkap" onClick={() => openEdit(l)} className="w-6 h-6 bg-surface text-secondary border border-gray-med rounded-full btn-3d-secondary btn-3d-sm flex items-center justify-center cursor-pointer shrink-0">
+                            <Pencil size={11} />
+                          </button>
+                          <button title="Hapus lead" onClick={() => setDeleteTarget(l)} className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0" style={{ background: '#ef4444' }}>
+                            <Trash2 size={11} />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-secondary text-xs">-</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!loading && canManage && (
+              <NewLeadRow
+                picOptions={picFilterOptions}
+                countryOptions={countryOptions}
+                onCreate={handleInlineCreate}
+                onError={(msg) => push(msg, 'error')}
+              />
+            )}
           </tbody>
         </table>
       </div>
@@ -453,5 +572,105 @@ export default function Leads() {
         confirming={deleting}
       />
     </div>
+  );
+}
+
+/**
+ * The always-present blank row at the foot of the table. Fill in a date and a
+ * number, press Enter from any field, and the lead is created — no dialog.
+ */
+function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
+  const EMPTY = {
+    entryDate: new Date().toISOString().slice(0, 10),
+    whatsapp: '',
+    picSales: '',
+    status: 'Baru',
+    country: '',
+    followUp1: '',
+    followUp2: '',
+    followUp3: '',
+    notes: '',
+  };
+  const [row, setRow] = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const waRef = useRef(null);
+
+  const set = (field) => (e) => setRow((r) => ({ ...r, [field]: e.target.value }));
+
+  async function save() {
+    if (!row.entryDate) return onError('Tanggal masuk wajib diisi.');
+    if (!row.whatsapp.trim()) return onError('Nomor WhatsApp wajib diisi.');
+    setSaving(true);
+    try {
+      await onCreate(row);
+      setRow({ ...EMPTY });
+      waRef.current?.focus();
+    } catch (err) {
+      onError(err.response?.data?.error || 'Gagal menambah lead');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      save();
+    }
+  }
+
+  const input = 'w-full h-7 px-1.5 text-xs bg-transparent text-gray-dark border border-transparent rounded outline-none hover:border-gray-med focus:border-primary';
+
+  return (
+    <tr className={`border-t border-gray-med bg-gray-light/40 ${saving ? 'opacity-60' : ''}`}>
+      <td className="px-2 py-2 text-secondary">
+        <Plus size={12} />
+      </td>
+      <td className="px-1 py-1">
+        <input type="date" value={row.entryDate} onChange={set('entryDate')} onKeyDown={onKeyDown} className={input} />
+      </td>
+      <td className="px-1 py-1">
+        <input
+          ref={waRef}
+          value={row.whatsapp}
+          onChange={set('whatsapp')}
+          onKeyDown={onKeyDown}
+          placeholder="Nomor WhatsApp…"
+          className={input}
+        />
+      </td>
+      <td className="px-1 py-1">
+        <input value={row.picSales} onChange={set('picSales')} onKeyDown={onKeyDown} list="new-lead-pic" placeholder="PIC" className={input} />
+        <datalist id="new-lead-pic">{picOptions.map((o) => <option key={o} value={o} />)}</datalist>
+      </td>
+      <td className="px-1 py-1">
+        <select value={row.status} onChange={set('status')} onKeyDown={onKeyDown} className={input}>
+          {LEAD_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
+        </select>
+      </td>
+      <td className="px-1 py-1">
+        <input value={row.country} onChange={set('country')} onKeyDown={onKeyDown} list="new-lead-country" placeholder="Negara" className={input} />
+        <datalist id="new-lead-country">{countryOptions.map((o) => <option key={o} value={o} />)}</datalist>
+      </td>
+      <td className="px-1 py-1"><input type="date" value={row.followUp1} onChange={set('followUp1')} onKeyDown={onKeyDown} className={input} /></td>
+      <td className="px-1 py-1"><input type="date" value={row.followUp2} onChange={set('followUp2')} onKeyDown={onKeyDown} className={input} /></td>
+      <td className="px-1 py-1"><input type="date" value={row.followUp3} onChange={set('followUp3')} onKeyDown={onKeyDown} className={input} /></td>
+      <td className="px-1 py-1">
+        <input value={row.notes} onChange={set('notes')} onKeyDown={onKeyDown} placeholder="Catatan" className={input} />
+      </td>
+      <td className="px-2 py-2">
+        <div className="flex justify-end">
+          <button
+            onClick={save}
+            disabled={saving}
+            title="Tambah lead (atau tekan Enter)"
+            className="h-6 px-2 text-white rounded-full btn-3d btn-3d-sm text-[11px] font-semibold cursor-pointer disabled:opacity-60"
+            style={{ background: '#2563eb' }}
+          >
+            {saving ? '...' : 'Tambah'}
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }
