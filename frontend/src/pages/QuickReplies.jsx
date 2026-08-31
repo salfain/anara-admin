@@ -9,6 +9,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
 import { SkeletonCards } from '../components/Skeleton';
+import { copyText } from '../utils/clipboard';
 
 export default function QuickReplies() {
   const push = useToastStore((s) => s.push);
@@ -76,14 +77,18 @@ export default function QuickReplies() {
   }
 
   async function handleCopy(reply) {
+    if (!(await copyText(reply.answer))) {
+      return push('Gagal menyalin', 'error');
+    }
     try {
-      await navigator.clipboard.writeText(reply.answer);
       await api.post(`/quick-replies/${reply.id}/use`);
       push('Copied!');
       setViewing(null);
       fetchReplies();
     } catch {
-      push('Gagal menyalin', 'error');
+      // Penyalinan sudah berhasil — kegagalan mencatat pemakaian tidak perlu
+      // dilaporkan sebagai "gagal menyalin".
+      setViewing(null);
     }
   }
 

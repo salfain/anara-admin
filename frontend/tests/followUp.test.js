@@ -6,7 +6,9 @@
 import test from 'node:test';
 import assert from 'node:assert';
 
-import { toWaNumber, waLink, fillPlaceholders, templateSnippets } from '../src/utils/whatsapp.js';
+import {
+  toWaNumber, waLink, fillPlaceholders, templateSnippets, supportsTextPrefill,
+} from '../src/utils/whatsapp.js';
 import { withFollowUpToday, willShiftFollowUps, followUpState } from '../src/utils/followUp.js';
 
 const daysAgo = (n) => {
@@ -29,13 +31,29 @@ test('tautan hanya dibuat kalau nomornya masuk akal', () => {
   assert.equal(waLink('08123'), 'https://wa.me/628123');
 });
 
-test('pesan tidak pernah dititipkan lewat URL', () => {
-  // WhatsApp merusak emoji pada parameter ?text= walaupun percent-encoding-nya
-  // benar. Pesannya lewat clipboard; kalau ada yang mengembalikan ?text= lagi,
-  // emoji di seluruh template akan rusak lagi tanpa terlihat.
+test('di luar ponsel, pesan tidak dititipkan lewat URL', () => {
+  // wa.me mengalihkan ke api.whatsapp.com sambil mengkode ulang parameternya,
+  // dan di situ %F0%9F%98%8A berubah jadi "�" — terlihat langsung di address
+  // bar. Pesannya lewat clipboard; kalau ?text= dikembalikan tanpa syarat,
+  // emoji di seluruh template rusak lagi tanpa terlihat.
+  assert.equal(supportsTextPrefill(), false, 'lingkungan tes bukan ponsel');
   const link = waLink('08123', 'salam kenal ya 😊');
   assert.equal(link, 'https://wa.me/628123');
   assert.doesNotMatch(link, /text=/);
+});
+
+test('ponsel menyerahkan emoji dengan utuh, jadi boleh diisi di URL', () => {
+  const asli = globalThis.navigator;
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/120' },
+    configurable: true,
+  });
+  try {
+    assert.equal(supportsTextPrefill(), true);
+    assert.equal(waLink('08123', 'ya 😊'), 'https://wa.me/628123?text=ya%20%F0%9F%98%8A');
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', { value: asli, configurable: true });
+  }
 });
 
 test('hanya placeholder yang nilainya kita tahu yang diisi', () => {

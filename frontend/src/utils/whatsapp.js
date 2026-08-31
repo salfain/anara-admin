@@ -13,17 +13,30 @@ export function toWaNumber(raw) {
 }
 
 /**
- * Tautan ke chat-nya saja, TANPA parameter ?text=.
+ * Bisakah pesan dititipkan lewat ?text= di perangkat ini?
  *
- * Pesannya sengaja tidak dititipkan lewat URL: emoji rusak jadi "�" di sisi
- * WhatsApp meski percent-encoding-nya benar (%F0%9F%98%8A). Terbukti dengan
- * membandingkan — teks yang sama, ditempel dari clipboard, sampai utuh.
- * Template follow-up penuh emoji, jadi jalur itu tidak bisa dipakai.
- * Pesannya disalin ke clipboard, lalu ditempel di kotak chat.
+ * Di ponsel bisa: tautannya diserahkan ke aplikasi lewat intent, dan emoji
+ * sampai utuh. Di Windows tidak: wa.me menyerahkannya ke WhatsApp Desktop
+ * lewat protocol handler, dan setiap emoji berubah jadi "�" walaupun
+ * percent-encoding-nya benar (%F0%9F%98%8A). Teks yang sama, ditempel dari
+ * clipboard, sampai utuh — jadi yang rusak penyerahannya, bukan encoding-nya.
+ *
+ * Menebak lewat user agent memang rapuh, tapi taruhannya timpang: salah
+ * menebak desktop cuma menambah satu kali tempel, sedangkan salah menebak
+ * ponsel mengembalikan emoji yang rusak.
  */
-export function waLink(number) {
+export function supportsTextPrefill() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+}
+
+/** Pesan hanya ikut di URL kalau perangkatnya menyerahkannya dengan utuh. */
+export function waLink(number, message) {
   const to = toWaNumber(number);
   if (!to) return null;
+  if (message && supportsTextPrefill()) {
+    return `https://wa.me/${to}?text=${encodeURIComponent(message)}`;
+  }
   return `https://wa.me/${to}`;
 }
 

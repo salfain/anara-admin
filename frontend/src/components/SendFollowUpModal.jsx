@@ -3,7 +3,8 @@ import { Search, Send, Copy, Check } from 'lucide-react';
 import api from '../api/client';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
-import { waLink, toWaNumber, fillPlaceholders, templateSnippets } from '../utils/whatsapp';
+import { waLink, toWaNumber, fillPlaceholders, templateSnippets, supportsTextPrefill } from '../utils/whatsapp';
+import { copyText } from '../utils/clipboard';
 
 /**
  * Pilih template Follow-Up Kit, sesuaikan pesannya, buka WhatsApp — lalu catat
@@ -50,7 +51,8 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
   if (!open || !lead) return null;
 
   const number = toWaNumber(lead.whatsapp);
-  const link = waLink(lead.whatsapp);
+  const prefilled = supportsTextPrefill();
+  const link = waLink(lead.whatsapp, message);
 
   function pick(snippet) {
     setActiveId(snippet.id);
@@ -65,30 +67,32 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
   }
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      push('Gagal menyalin', 'error');
+    if (!(await copyText(message))) {
+      return push('Gagal menyalin', 'error');
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   // Salin dulu, baru buka chat. Keduanya dipanggil di tick yang sama supaya
   // masih terhitung sebagai satu gestur pengguna — kalau ditunggu (await),
-  // pemblokir popup bisa menolak jendelanya.
+  // penyalinan cadangan ditolak dan pemblokir popup bisa menahan jendelanya.
   function openWhatsApp() {
     if (!link) return push('Nomor WhatsApp tidak valid', 'error');
-    const copying = navigator.clipboard?.writeText(message);
+    const copying = copyText(message);
     window.open(link, '_blank', 'noopener');
     setOpened(true);
-
-    if (!copying) {
-      return push('Chat dibuka. Salin pesannya dulu dengan tombol Salin.', 'error');
-    }
-    copying
-      .then(() => push('Pesan disalin — tempel di WhatsApp dengan Ctrl+V'))
-      .catch(() => push('Chat dibuka, tapi gagal menyalin. Pakai tombol Salin.', 'error'));
+    // Pesannya tetap disalin walau sudah ikut di URL — kalau ternyata tidak
+    // terisi, tinggal tempel tanpa harus kembali ke sini.
+    copying.then((ok) => {
+      if (prefilled) return;
+      push(
+        ok
+          ? 'Pesan disalin — tempel di WhatsApp dengan Ctrl+V'
+          : 'Chat dibuka, tapi gagal menyalin. Salin manual dari kotak pesan.',
+        ok ? 'success' : 'error'
+      );
+    });
   }
 
   return (
@@ -167,10 +171,12 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
             <div className="text-[11px] text-secondary">
               Placeholder yang datanya kita punya sudah terisi. Sisanya masih dalam kurung siku — isi dulu sebelum kirim.
             </div>
-            <div className="text-[11px] rounded-lg px-3 py-2" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
-              Tombol di bawah menyalin pesan ini lalu membuka chat-nya — tinggal tempel (Ctrl+V) dan kirim.
-              Emoji rusak kalau pesannya dititipkan lewat alamat WhatsApp, jadi lewat clipboard.
-            </div>
+            {!prefilled && (
+              <div className="text-[11px] rounded-lg px-3 py-2" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
+                Tombol di bawah menyalin pesan ini lalu membuka chat-nya — tinggal tempel (Ctrl+V) dan kirim.
+                Di WhatsApp Desktop emoji rusak kalau pesannya dititipkan lewat alamat, jadi lewat clipboard.
+              </div>
+            )}
           </div>
         </div>
 
@@ -222,7 +228,7 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
               style={{ background: '#25D366' }}
             >
               <Send size={14} />
-              Salin &amp; Buka WhatsApp
+              {prefilled ? 'Buka WhatsApp' : 'Salin & Buka WhatsApp'}
             </button>
           </div>
         </div>

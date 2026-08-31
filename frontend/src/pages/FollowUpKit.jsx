@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { CADENCE } from '../data/followUpTemplates';
 import usePermissions from '../hooks/usePermissions';
 import { SkeletonCards } from '../components/Skeleton';
+import { copyText } from '../utils/clipboard';
 
 function highlight(text) {
   const parts = text.split(/(\[[^\]]+\])/g);
@@ -34,14 +35,12 @@ function CopyButton({ text, small }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      push('Disalin ke clipboard!');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      push('Gagal menyalin', 'error');
+    if (!(await copyText(text))) {
+      return push('Gagal menyalin', 'error');
     }
+    setCopied(true);
+    push('Disalin ke clipboard!');
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
