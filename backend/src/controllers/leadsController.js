@@ -1,6 +1,15 @@
 const pool = require('../db/pool');
 const { logActivity } = require('./activityController');
 
+// Ambang "sudah lama tidak disentuh", dalam hari sejak follow-up terakhir
+// (atau sejak lead masuk, kalau belum pernah di-follow-up sama sekali).
+// Frontend memakai angka yang sama di src/utils/followUp.js — ubah keduanya.
+const DUE_AFTER_DAYS = 3;
+const OVERDUE_AFTER_DAYS = 7;
+
+// Lead yang sudah DP atau batal tidak perlu dikejar lagi.
+const CLOSED_STATUSES = ['Sudah DP', 'Batal'];
+
 function serialize(row) {
   return {
     id: row.id,
@@ -168,7 +177,7 @@ async function bulkCreate(req, res, next) {
 
 async function summary(req, res, next) {
   try {
-    const [monthly, byStatus, byPic] = await Promise.all([
+    const [monthly, byStatus, byPic, followUp] = await Promise.all([
       pool.query(
         `SELECT to_char(date_trunc('month', entry_date), 'YYYY-MM') AS month, COUNT(*) AS count
          FROM leads
@@ -180,6 +189,21 @@ async function summary(req, res, next) {
         `SELECT COALESCE(pic_sales, 'Tanpa PIC') AS pic_sales, COUNT(*) AS count
          FROM leads GROUP BY pic_sales ORDER BY count DESC LIMIT 8`
       ),
+      // GREATEST melewati NULL, jadi ini tanggal FU terakhir yang terisi —
+      // dan jatuh kembali ke tanggal masuk kalau belum ada FU sama sekali.
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE gap >= $1) AS due,
+           COUNT(*) FILTER (WHERE gap >= $2) AS overdue
+         FROM (
+           SELECT CURRENT_DATE - COALESCE(
+             GREATEST(follow_up_1, follow_up_2, follow_up_3), entry_date
+           ) AS gap
+           FROM leads
+           WHERE status <> ALL($3::text[])
+         ) t`,
+        [DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS, CLOSED_STATUSES]
+      ),
     ]);
 
     res.json({
@@ -187,6 +211,12 @@ async function summary(req, res, next) {
         monthly: monthly.rows.map((r) => ({ month: r.month, count: parseInt(r.count, 10) })),
         byStatus: byStatus.rows.map((r) => ({ status: r.status, count: parseInt(r.count, 10) })),
         byPic: byPic.rows.map((r) => ({ picSales: r.pic_sales, count: parseInt(r.count, 10) })),
+        followUp: {
+          due: parseInt(followUp.rows[0].due, 10),
+          overdue: parseInt(followUp.rows[0].overdue, 10),
+          dueAfterDays: DUE_AFTER_DAYS,
+          overdueAfterDays: OVERDUE_AFTER_DAYS,
+        },
       },
     });
   } catch (err) {

@@ -115,3 +115,35 @@ test('repeated edits do not walk the dates backwards', async () => {
   assert.equal(lead.entryDate, '2026-08-28');
   assert.equal(lead.followUp1, '2026-07-29');
 });
+
+test('summary counts leads that have gone quiet', async () => {
+  await pool.query('DELETE FROM leads');
+  const day = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const rows = [
+    // [entry, fu1, status, harapan]
+    [day(0), null, 'Baru'],        // baru masuk hari ini -> aman
+    [day(2), null, 'Baru'],        // 2 hari -> masih aman
+    [day(3), null, 'Baru'],        // 3 hari -> perlu FU
+    [day(10), day(4), 'Nego'],     // FU terakhir 4 hari lalu -> perlu FU
+    [day(30), day(9), 'Proses'],   // FU terakhir 9 hari lalu -> terlambat
+    [day(30), null, 'Sudah DP'],   // sudah closing -> tidak dihitung
+    [day(30), null, 'Batal'],      // batal -> tidak dihitung
+  ];
+  for (const [entry, fu1, status] of rows) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, status, follow_up_1) VALUES ($1, '628', $2, $3)`,
+      [entry, status, fu1]
+    );
+  }
+
+  const { data } = await (await fetch(`${base}/leads/summary`, { headers })).json();
+  // due mencakup yang terlambat: 3 hari, 4 hari, dan 9 hari.
+  assert.equal(data.followUp.due, 3);
+  assert.equal(data.followUp.overdue, 1);
+  assert.equal(data.followUp.dueAfterDays, 3);
+});

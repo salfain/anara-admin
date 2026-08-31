@@ -99,6 +99,16 @@ export default function Dashboard() {
             Lihat Analytics
           </Link>
         )}
+        {leadsSummary?.followUp?.due > 0 && (
+          <Link
+            to="/leads?fu=due"
+            className="h-10 px-4 rounded-full btn-3d text-[13px] font-semibold flex items-center gap-2 cursor-pointer text-white"
+            style={{ background: leadsSummary.followUp.overdue > 0 ? '#ef4444' : '#f59e0b' }}
+          >
+            {leadsSummary.followUp.due} lead perlu di-follow-up
+            {leadsSummary.followUp.overdue > 0 && ` (${leadsSummary.followUp.overdue} terlambat)`}
+          </Link>
+        )}
         <Link
           to="/leads"
           className="h-10 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold flex items-center cursor-pointer"

@@ -9,6 +9,7 @@ import LeadDetailSheet from '../components/LeadDetailSheet';
 import usePermissions from '../hooks/usePermissions';
 import Skeleton, { SkeletonRows } from '../components/Skeleton';
 import EditableCell from '../components/EditableCell';
+import { followUpState, daysSinceContact, DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS } from '../utils/followUp';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -74,6 +75,11 @@ export default function Leads() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [picFilter, setPicFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
+  // Dashboard menautkan ke sini dengan ?fu=due / ?fu=overdue.
+  const [fuFilter, setFuFilter] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('fu');
+    return v === 'due' || v === 'overdue' ? v : 'all';
+  });
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef(null);
@@ -123,11 +129,26 @@ export default function Leads() {
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
       if (picFilter !== 'all' && l.picSales !== picFilter) return false;
       if (monthFilter !== 'all' && monthKey(l.entryDate) !== monthFilter) return false;
+      if (fuFilter !== 'all') {
+        const state = followUpState(l);
+        // "Perlu FU" mencakup yang sudah terlambat — keduanya sama-sama menunggu.
+        if (fuFilter === 'due' && state !== 'due' && state !== 'overdue') return false;
+        if (fuFilter === 'overdue' && state !== 'overdue') return false;
+      }
       if (!search) return true;
       const q = search.toLowerCase();
       return [l.whatsapp, l.picSales, l.notes, l.country].filter(Boolean).join(' ').toLowerCase().includes(q);
     });
-  }, [leads, search, statusFilter, picFilter, monthFilter]);
+  }, [leads, search, statusFilter, picFilter, monthFilter, fuFilter]);
+
+  const fuCounts = useMemo(() => {
+    let due = 0, overdue = 0;
+    for (const l of leads) {
+      const state = followUpState(l);
+      if (state === 'overdue') { overdue++; due++; } else if (state === 'due') due++;
+    }
+    return { due, overdue };
+  }, [leads]);
 
   const picFilterOptions = useMemo(() => {
     const fromLeads = leads.map((l) => l.picSales).filter(Boolean);
@@ -328,6 +349,37 @@ export default function Leads() {
         </div>
       </div>
 
+      {!loading && (fuCounts.due > 0 || fuFilter !== 'all') && (
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <span className="text-secondary">Butuh perhatian:</span>
+          <button
+            onClick={() => setFuFilter(fuFilter === 'due' ? 'all' : 'due')}
+            className="h-7 px-3 rounded-full text-xs font-semibold cursor-pointer border"
+            style={fuFilter === 'due'
+              ? { background: 'var(--color-warn-soft)', color: 'var(--color-warn-soft-text)', borderColor: 'transparent' }
+              : { background: 'transparent', color: 'var(--color-secondary)', borderColor: 'var(--color-gray-med)' }}
+            title={`Belum disentuh ${DUE_AFTER_DAYS} hari atau lebih`}
+          >
+            {fuCounts.due} perlu di-follow-up
+          </button>
+          <button
+            onClick={() => setFuFilter(fuFilter === 'overdue' ? 'all' : 'overdue')}
+            className="h-7 px-3 rounded-full text-xs font-semibold cursor-pointer border"
+            style={fuFilter === 'overdue'
+              ? { background: '#fee2e2', color: '#b91c1c', borderColor: 'transparent' }
+              : { background: 'transparent', color: 'var(--color-secondary)', borderColor: 'var(--color-gray-med)' }}
+            title={`Belum disentuh ${OVERDUE_AFTER_DAYS} hari atau lebih`}
+          >
+            {fuCounts.overdue} terlambat
+          </button>
+          {fuFilter !== 'all' && (
+            <button onClick={() => setFuFilter('all')} className="h-7 px-2 text-xs text-secondary underline cursor-pointer">
+              Tampilkan semua
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3">
         <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
@@ -465,7 +517,11 @@ export default function Leads() {
             {loading && <SkeletonRows rows={6} cols={11} />}
             {!loading && filtered.length === 0 && (
               <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
-                {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
+                {fuFilter !== 'all'
+                  ? 'Tidak ada lead yang perlu di-follow-up. '
+                  : search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all'
+                    ? 'Tidak ada lead yang cocok.'
+                    : 'Belum ada lead.'}
               </td></tr>
             )}
             {!loading && filtered.map((l, idx) => {
@@ -484,7 +540,12 @@ export default function Leads() {
 
               return (
                 <tr key={l.id} className={`border-b border-gray-med last:border-b-0 hover:bg-gray-light/60 ${rowBusy === l.id ? 'opacity-60' : ''}`}>
-                  <td className="px-2 py-2 text-secondary truncate">{idx + 1}</td>
+                  <td className="px-2 py-2 text-secondary truncate">
+                    <span className="flex items-center gap-1.5">
+                      <FollowUpDot lead={l} />
+                      {idx + 1}
+                    </span>
+                  </td>
                   {cell('entryDate', { type: 'date', className: 'text-gray-dark', display: fmtDate(l.entryDate) })}
                   {cell('whatsapp', { className: 'text-gray-dark font-medium', display: l.whatsapp })}
                   {cell('picSales', {
@@ -672,5 +733,23 @@ function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
         </div>
       </td>
     </tr>
+  );
+}
+
+/** Titik kecil di kolom nomor: penanda lead yang sudah lama tidak disentuh. */
+function FollowUpDot({ lead }) {
+  const state = followUpState(lead);
+  if (state === 'ok' || state === 'closed') {
+    // Ruang tetap dipesan supaya nomor baris tidak bergeser.
+    return <span className="w-1.5 h-1.5 shrink-0" />;
+  }
+  const days = daysSinceContact(lead);
+  const color = state === 'overdue' ? '#ef4444' : '#f59e0b';
+  return (
+    <span
+      className="w-1.5 h-1.5 rounded-full shrink-0"
+      style={{ background: color }}
+      title={`${state === 'overdue' ? 'Terlambat' : 'Perlu follow-up'} — ${days} hari sejak kontak terakhir`}
+    />
   );
 }
