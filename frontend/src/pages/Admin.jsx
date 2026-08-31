@@ -206,7 +206,11 @@ function UsersTab({ currentUser }) {
                   <td className="text-sm px-4 py-3.5 border-b border-gray-med">
                     <span
                       className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={u.isAdmin ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' }}
+                      style={
+                        u.isAdmin
+                          ? { background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }
+                          : { background: 'var(--color-neutral-soft)', color: 'var(--color-neutral-soft-text)' }
+                      }
                     >
                       {u.roleLabel || u.role}
                     </span>
@@ -214,7 +218,11 @@ function UsersTab({ currentUser }) {
                   <td className="px-4 py-3.5 border-b border-gray-med">
                     <span
                       className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={u.status === 'pending' ? { background: '#fef3c7', color: '#b45309' } : { background: '#dcfce7', color: '#16a34a' }}
+                      style={
+                        u.status === 'pending'
+                          ? { background: 'var(--color-warn-soft)', color: 'var(--color-warn-soft-text)' }
+                          : { background: 'var(--color-success-soft)', color: 'var(--color-success-soft-text)' }
+                      }
                     >
                       {u.status === 'pending' ? 'Pending' : 'Active'}
                     </span>
@@ -494,7 +502,9 @@ function RolesTab({ currentUser }) {
 
   function RoleColumn({ role }) {
     const list = users.filter((u) => u.role === role.key);
-    const badgeStyle = role.isAdmin ? { background: '#dbeafe', color: '#1e40af' } : { background: '#f1f5f9', color: '#475569' };
+    const badgeStyle = role.isAdmin
+      ? { background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }
+      : { background: 'var(--color-neutral-soft)', color: 'var(--color-neutral-soft-text)' };
     const otherRoles = roles.filter((r) => r.key !== role.key && (currentUser?.isAdmin || !r.isAdmin));
 
     return (
@@ -728,10 +738,16 @@ function PermissionsTab({ currentUser }) {
                 key={r.key}
                 onClick={() => setSelectedKey(r.key)}
                 className="flex items-center justify-between gap-2 px-4 py-3 text-left border-b border-gray-med last:border-b-0 cursor-pointer"
-                style={selectedKey === r.key ? { background: '#dbeafe' } : undefined}
+                style={
+                  selectedKey === r.key
+                    ? { background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }
+                    : undefined
+                }
               >
-                <span className="text-sm font-semibold text-gray-dark truncate">{r.label}</span>
-                <span className="text-[11px] text-secondary shrink-0">
+                <span className={`text-sm font-semibold truncate ${selectedKey === r.key ? '' : 'text-gray-dark'}`}>
+                  {r.label}
+                </span>
+                <span className={`text-[11px] shrink-0 ${selectedKey === r.key ? 'opacity-80' : 'text-secondary'}`}>
                   {r.isAdmin ? 'Semua' : `${r.permissions.length} akses`}
                 </span>
               </button>
@@ -745,12 +761,12 @@ function PermissionsTab({ currentUser }) {
           ) : (
             <>
               {selected.isAdmin && (
-                <div className="text-xs rounded-lg px-4 py-3" style={{ background: '#dbeafe', color: '#1e40af' }}>
+                <div className="text-xs rounded-lg px-4 py-3" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
                   Role &quot;{selected.label}&quot; punya akses Admin, jadi semua hak akses aktif dan tidak bisa diubah.
                 </div>
               )}
               {isOwnRole && !selected.isAdmin && (
-                <div className="text-xs rounded-lg px-4 py-3" style={{ background: '#fef3c7', color: '#92400e' }}>
+                <div className="text-xs rounded-lg px-4 py-3" style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn-soft-text)' }}>
                   Ini role kamu sendiri, jadi hak aksesnya tidak bisa kamu ubah. Minta Admin untuk mengubahnya.
                 </div>
               )}
