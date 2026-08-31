@@ -12,12 +12,30 @@ import Admin from './pages/Admin';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import useAuthStore from './store/authStore';
+import useAutoRefresh from './hooks/useAutoRefresh';
 
 export default function App() {
   const { token, refreshUser } = useAuthStore();
 
   useEffect(() => {
     if (token) refreshUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Permissions are enforced live by the server but cached in the client, so
+  // without this the nav and buttons keep showing what the user could do when
+  // the page was opened. Re-read them periodically, on tab focus, and as soon
+  // as the server turns an action down.
+  useAutoRefresh(() => {
+    if (useAuthStore.getState().token) refreshUser();
+  }, 60000);
+
+  useEffect(() => {
+    function onForbidden() {
+      if (useAuthStore.getState().token) refreshUser();
+    }
+    window.addEventListener('anara:forbidden', onForbidden);
+    return () => window.removeEventListener('anara:forbidden', onForbidden);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import api from '../api/client';
 
+// Bursts of 403s (a page firing several requests at once) would otherwise
+// each kick off their own refresh.
+let refreshInFlight = null;
+
 const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('anara_user') || 'null'),
   token: localStorage.getItem('anara_token') || null,
@@ -33,20 +37,24 @@ const useAuthStore = create((set) => ({
     }
   },
 
+  // Called on load, on a timer, on tab focus, and whenever the server rejects
+  // an action as forbidden — so it has to be cheap and safe to call often.
+  // The token no longer needs reissuing: the backend resolves the role and its
+  // permissions from the database per request rather than from the claims.
   refreshUser: async () => {
-    try {
-      // Reissue the token too — an old token may predate the isAdmin claim,
-      // and the backend trusts that claim (not a live role lookup) on every request.
-      const { data: refreshed } = await api.post('/auth/refresh');
-      localStorage.setItem('anara_token', refreshed.token);
-      set({ token: refreshed.token });
-
-      const { data } = await api.get('/auth/me');
-      localStorage.setItem('anara_user', JSON.stringify(data.user));
-      set({ user: data.user });
-    } catch {
-      // token invalid/expired — leave to existing 401 handling elsewhere
-    }
+    if (refreshInFlight) return refreshInFlight;
+    refreshInFlight = (async () => {
+      try {
+        const { data } = await api.get('/auth/me');
+        localStorage.setItem('anara_user', JSON.stringify(data.user));
+        set({ user: data.user });
+      } catch {
+        // token invalid/expired — leave to existing 401 handling elsewhere
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+    return refreshInFlight;
   },
 
   logout: () => {

@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { loadAccount } = require('../middleware/auth');
 const {
   PERMISSION_GROUPS,
   ALL_PERMISSIONS,
@@ -83,7 +84,7 @@ async function create(req, res, next) {
     }
     // Membuat role ber-akses Admin sama saja dengan mengangkat admin baru,
     // jadi hak akses "Kelola role" saja tidak cukup.
-    if (isAdmin && !req.user.isAdmin) {
+    if (isAdmin && !(await loadAccount(req.user.id)).isAdmin) {
       return res.status(403).json({ error: 'Hanya Admin yang bisa membuat role dengan akses Admin' });
     }
     const key = slugify(label);
@@ -124,7 +125,8 @@ async function updatePermissions(req, res, next) {
     }
     const role = roleRes.rows[0];
     // Mengubah hak akses role sendiri = bisa memberi diri sendiri akses apa pun.
-    if (role.key === req.user.role && !req.user.isAdmin) {
+    const account = await loadAccount(req.user.id);
+    if (role.key === account.role && !account.isAdmin) {
       return res.status(400).json({ error: 'Tidak bisa mengubah hak akses role kamu sendiri' });
     }
     if (role.is_admin) {

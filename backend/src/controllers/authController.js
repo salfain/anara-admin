@@ -25,7 +25,7 @@ function sanitizeUser(user, permissions) {
 }
 
 function userPermissions(user) {
-  return loadPermissions({ role: user.role, isAdmin: Boolean(user.is_admin) });
+  return loadPermissions(user.id);
 }
 
 async function findUserWithRole(where, params) {

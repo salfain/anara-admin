@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { logActivity } = require('./activityController');
+const { loadAccount } = require('../middleware/auth');
 
 function sanitizeUser(user) {
   const { password_hash, is_admin, role_label, ...rest } = user;
@@ -80,7 +81,7 @@ async function invite(req, res, next) {
     }
     // Hanya admin sungguhan yang boleh menaikkan orang ke role ber-akses Admin —
     // tanpa ini, siapa pun dengan hak akses "Kelola user" bisa mengangkat admin baru.
-    if (targetRole.is_admin && !req.user.isAdmin) {
+    if (targetRole.is_admin && !(await loadAccount(req.user.id)).isAdmin) {
       return res.status(403).json({ error: 'Hanya Admin yang bisa memberikan role dengan akses Admin' });
     }
     if (!password || password.length < 8) {
@@ -124,7 +125,7 @@ async function updateRole(req, res, next) {
     }
     // Hanya admin sungguhan yang boleh menaikkan orang ke role ber-akses Admin —
     // tanpa ini, siapa pun dengan hak akses "Kelola user" bisa mengangkat admin baru.
-    if (targetRole.is_admin && !req.user.isAdmin) {
+    if (targetRole.is_admin && !(await loadAccount(req.user.id)).isAdmin) {
       return res.status(403).json({ error: 'Hanya Admin yang bisa memberikan role dengan akses Admin' });
     }
 
