@@ -76,6 +76,10 @@ export default function EditableCell({
     commit();
   }
 
+  // Kolom seperti Paket menyimpan id tapi menampilkan nama, jadi opsi boleh
+  // berupa string biasa atau { value, label }.
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+
   const shared = {
     ref,
     value: draft,
@@ -98,8 +102,8 @@ export default function EditableCell({
             commit(e.target.value);
           }}
         >
-          {options.map((o) => (
-            <option key={o} value={o}>{o}</option>
+          {opts.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
       ) : (
@@ -112,8 +116,8 @@ export default function EditableCell({
           />
           {type === 'combo' && (
             <datalist id={listId}>
-              {options.map((o) => (
-                <option key={o} value={o} />
+              {opts.map((o) => (
+                <option key={o.value} value={o.value} />
               ))}
             </datalist>
           )}

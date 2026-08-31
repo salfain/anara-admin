@@ -79,3 +79,35 @@ test('mencatat follow-up mengeluarkan lead dari daftar pengingat', () => {
   assert.equal(followUpState(stale), 'overdue');
   assert.equal(followUpState({ ...stale, ...withFollowUpToday(stale, daysAgo(0)) }), 'ok');
 });
+
+test('pesan follow-up terisi dari data lead dan paketnya', () => {
+  const template =
+    'Kak [Nama], kuota paket [Paket] keberangkatan [Tanggal Keberangkatan] tinggal terbatas ' +
+    '(all-in Rp[Harga All-In]).\n\n[Nama CS] — Anara Explore';
+
+  const filled = fillPlaceholders(template, {
+    csName: 'Dita',
+    leadName: 'Ibu Sari',
+    packageName: 'Korea Autumn 2026',
+    packageDates: '12-19 Okt 2026',
+    packagePrice: 18500000,
+  });
+
+  assert.match(filled, /Kak Ibu Sari/);
+  assert.match(filled, /paket Korea Autumn 2026/);
+  assert.match(filled, /keberangkatan 12-19 Okt 2026/);
+  assert.match(filled, /Rp18\.500\.000/);
+  assert.match(filled, /Dita — Anara Explore/);
+  assert.doesNotMatch(filled, /\[/, 'tidak boleh ada placeholder tersisa');
+});
+
+test('[Nama CS] diganti sebelum [Nama], bukan sesudahnya', () => {
+  // Pola yang lebih pendek akan memakan awalannya dan menyisakan " CS]".
+  const filled = fillPlaceholders('[Nama CS] menyapa [Nama]', { csName: 'Dita', leadName: 'Sari' });
+  assert.equal(filled, 'Dita menyapa Sari');
+});
+
+test('placeholder yang datanya belum ada tetap dibiarkan utuh', () => {
+  const filled = fillPlaceholders('Kak [Nama], paket [Paket]', { csName: 'Dita' });
+  assert.equal(filled, 'Kak [Nama], paket [Paket]');
+});

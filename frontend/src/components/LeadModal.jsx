@@ -4,6 +4,8 @@ export const LEAD_STATUSES = ['Baru', 'Proses', 'Nego', 'Sudah DP', 'Batal'];
 
 const EMPTY = {
   entryDate: '',
+  name: '',
+  packageId: '',
   whatsapp: '',
   picSales: '',
   status: 'Baru',
@@ -21,7 +23,7 @@ function toInputDate(value) {
 
 const CUSTOM_COUNTRY = '__custom__';
 
-export default function LeadModal({ open, onClose, onSubmit, initial, saving, picOptions = [], countryOptions = [] }) {
+export default function LeadModal({ open, onClose, onSubmit, initial, saving, picOptions = [], countryOptions = [], packageOptions = [] }) {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
   const [customCountry, setCustomCountry] = useState(false);
@@ -32,6 +34,8 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
       const country = initial.country || '';
       setForm({
         entryDate: toInputDate(initial.entryDate),
+        name: initial.name || '',
+        packageId: initial.packageId ? String(initial.packageId) : '',
         whatsapp: initial.whatsapp || '',
         picSales: initial.picSales || '',
         status: initial.status || 'Baru',
@@ -90,6 +94,27 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
               placeholder="e.g. 628123456789"
               className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Nama Customer</label>
+            <input
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+              placeholder="e.g. Ibu Sari"
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Paket Diminati</label>
+            <select
+              value={form.packageId}
+              onChange={(e) => set('packageId', e.target.value)}
+              className="h-10 px-3 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              {packageOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">PIC Sales</label>

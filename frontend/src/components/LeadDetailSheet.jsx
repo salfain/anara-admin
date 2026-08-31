@@ -23,7 +23,8 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
       >
         <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3 border-b border-gray-med">
           <div className="min-w-0">
-            <div className="text-base font-semibold text-gray-dark break-all">{lead.whatsapp}</div>
+            <div className="text-base font-semibold text-gray-dark break-all">{lead.name || lead.whatsapp}</div>
+            {lead.name && <div className="text-xs text-secondary mt-0.5 break-all">{lead.whatsapp}</div>}
             <div className="text-xs text-secondary mt-1">
               {index != null && `#${index + 1} · `}Masuk {fmtDate(lead.entryDate)}
             </div>
@@ -43,6 +44,7 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
 
         <div className="px-5 py-2">
           <Row label="PIC Sales" value={lead.picSales} />
+          <Row label="Paket" value={lead.packageName} />
           <Row label="Destinasi" value={lead.country} />
           <Row label="Follow-up 1" value={fmtDate(lead.followUp1)} />
           <Row label="Follow-up 2" value={fmtDate(lead.followUp2)} />

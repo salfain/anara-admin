@@ -153,7 +153,14 @@ CREATE TABLE IF NOT EXISTS leads (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Nama customer dan paket yang diminati. Keduanya mengisi placeholder yang
+-- paling sering muncul di template follow-up ([Nama], [Paket], harga, tanggal
+-- keberangkatan), yang sebelumnya harus diketik ulang tiap kali kirim.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS package_id INT REFERENCES packages(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
+CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
 CREATE INDEX IF NOT EXISTS idx_quick_replies_category ON quick_replies(category);

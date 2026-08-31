@@ -54,7 +54,14 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
 
   function pick(snippet) {
     setActiveId(snippet.id);
-    setMessage(fillPlaceholders(snippet.text, { csName: currentUser?.name, destination: lead.country }));
+    setMessage(fillPlaceholders(snippet.text, {
+      csName: currentUser?.name,
+      leadName: lead.name,
+      destination: lead.country,
+      packageName: lead.packageName,
+      packageDates: lead.packageDates,
+      packagePrice: lead.packagePrice,
+    }));
   }
 
   async function copy() {
@@ -82,7 +89,9 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
         <div className="px-5 py-4 border-b border-gray-med">
           <div className="text-lg font-semibold text-gray-dark">Kirim Follow-Up</div>
           <div className="text-[13px] text-secondary mt-0.5">
-            ke <span className="font-medium text-gray-dark">{lead.whatsapp}</span>
+            ke <span className="font-medium text-gray-dark">{lead.name || lead.whatsapp}</span>
+            {lead.name ? ` · ${lead.whatsapp}` : ''}
+            {lead.packageName ? ` · ${lead.packageName}` : ''}
             {lead.country ? ` · ${lead.country}` : ''}
             {lead.picSales ? ` · PIC ${lead.picSales}` : ''}
           </div>
@@ -145,7 +154,7 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
               className="w-full flex-1 min-h-[180px] px-3 py-2 border border-gray-med rounded-lg text-sm bg-surface text-gray-dark focus:outline-none focus:border-primary resize-none"
             />
             <div className="text-[11px] text-secondary">
-              Placeholder dalam kurung siku seperti [Nama] sengaja dibiarkan — isi dulu sebelum kirim.
+              Placeholder yang datanya kita punya sudah terisi. Sisanya masih dalam kurung siku — isi dulu sebelum kirim.
             </div>
           </div>
         </div>

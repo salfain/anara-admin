@@ -1,12 +1,15 @@
 import * as XLSX from 'xlsx';
 
 const EXPORT_HEADERS = [
-  'Tanggal Masuk', 'Nomor WhatsApp', 'PIC Sales', 'Status', 'Destinasi', 'FU 1', 'FU 2', 'FU 3', 'Notes',
+  'Tanggal Masuk', 'Nama', 'Nomor WhatsApp', 'PIC Sales', 'Status', 'Paket', 'Destinasi', 'FU 1', 'FU 2', 'FU 3', 'Notes',
 ];
 
 const HEADER_ALIASES = {
   'tanggal masuk': 'entryDate',
   'tanggal': 'entryDate',
+  'nama': 'name',
+  'nama customer': 'name',
+  'paket': 'packageName',
   'nomor whatsapp': 'whatsapp',
   'no whatsapp': 'whatsapp',
   'no. whatsapp': 'whatsapp',
@@ -43,9 +46,11 @@ export function leadsToExcel(leads) {
   for (const l of leads) {
     rows.push([
       l.entryDate ? String(l.entryDate).slice(0, 10) : '',
+      l.name || '',
       l.whatsapp || '',
       l.picSales || '',
       l.status || '',
+      l.packageName || '',
       l.country || '',
       l.followUp1 ? String(l.followUp1).slice(0, 10) : '',
       l.followUp2 ? String(l.followUp2).slice(0, 10) : '',

@@ -24,11 +24,28 @@ export function waLink(number, message) {
  * dan kawan-kawan — sengaja dibiarkan supaya CS mengisinya sendiri sebelum
  * kirim, bukan diam-diam ditebak aplikasi.
  */
-export function fillPlaceholders(text, { csName, destination } = {}) {
+export function fillPlaceholders(text, { csName, leadName, destination, packageName, packageDates, packagePrice } = {}) {
   let out = String(text || '');
-  if (csName) out = out.replace(/\[Nama CS\]/gi, csName);
-  if (destination) out = out.replace(/\[Destinasi\]|\[Negara\]/gi, destination);
+  const sub = (pattern, value) => {
+    if (value !== undefined && value !== null && value !== '') out = out.replace(pattern, value);
+  };
+  // [Nama CS] harus diganti sebelum [Nama], kalau tidak pola yang lebih pendek
+  // akan memakan awalannya dan menyisakan " CS]".
+  sub(/\[Nama CS\]/gi, csName);
+  sub(/\[Nama Paket\]|\[Paket\]/gi, packageName);
+  sub(/\[Nama\]/gi, leadName);
+  sub(/\[Tanggal Keberangkatan\]/gi, packageDates);
+  sub(/\[Harga All-In\]/gi, formatPrice(packagePrice));
+  sub(/\[Destinasi\]|\[Negara\]/gi, destination);
   return out;
+}
+
+/** Template menulis "Rp[Harga All-In]", jadi yang disisipkan cukup angkanya. */
+export function formatPrice(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const n = Number(value);
+  if (Number.isNaN(n)) return '';
+  return new Intl.NumberFormat('id-ID').format(n);
 }
 
 /** Semua pesan yang bisa dikirim dari satu template, sudah diratakan. */

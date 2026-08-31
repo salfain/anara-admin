@@ -147,3 +147,53 @@ test('summary counts leads that have gone quiet', async () => {
   assert.equal(data.followUp.overdue, 1);
   assert.equal(data.followUp.dueAfterDays, 3);
 });
+
+test('a lead carries its customer name and the package they asked about', async () => {
+  await pool.query('DELETE FROM leads');
+  const pkg = await pool.query(
+    `INSERT INTO packages (name, destination, dates, price) VALUES ('Korea Autumn 2026', 'Korea', '12-19 Okt 2026', 18500000) RETURNING id`
+  );
+  const packageId = pkg.rows[0].id;
+
+  const created = await (await fetch(`${base}/leads`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ entryDate: '2026-08-28', whatsapp: '628111', name: 'Ibu Sari', packageId }),
+  })).json();
+
+  // Detail paket ikut di respons supaya pesan follow-up tidak perlu request lagi.
+  assert.equal(created.data.name, 'Ibu Sari');
+  assert.equal(created.data.packageName, 'Korea Autumn 2026');
+  assert.equal(created.data.packageDates, '12-19 Okt 2026');
+  assert.equal(created.data.packagePrice, 18500000);
+
+  const list = await (await fetch(`${base}/leads`, { headers })).json();
+  assert.equal(list.data[0].packageName, 'Korea Autumn 2026');
+});
+
+test('import matches packages by name and keeps leads whose package is unknown', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query('DELETE FROM packages');
+  await pool.query(`INSERT INTO packages (name) VALUES ('Korea Autumn 2026')`);
+
+  const res = await fetch(`${base}/leads/bulk`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      rows: [
+        { entryDate: '2026-08-01', whatsapp: '628001', name: 'Sari', packageName: 'korea autumn 2026' },
+        { entryDate: '2026-08-02', whatsapp: '628002', name: 'Budi', packageName: 'Paket Yang Sudah Dihapus' },
+      ],
+    }),
+  });
+  assert.equal((await res.json()).data.imported, 2);
+
+  const list = await (await fetch(`${base}/leads`, { headers })).json();
+  const byNumber = Object.fromEntries(list.data.map((l) => [l.whatsapp, l]));
+  // Pencocokan nama paket mengabaikan besar-kecil huruf.
+  assert.equal(byNumber['628001'].packageName, 'Korea Autumn 2026');
+  assert.equal(byNumber['628001'].name, 'Sari');
+  // Paket tak dikenal tidak boleh menggagalkan barisnya.
+  assert.equal(byNumber['628002'].packageId, null);
+  assert.equal(byNumber['628002'].name, 'Budi');
+});

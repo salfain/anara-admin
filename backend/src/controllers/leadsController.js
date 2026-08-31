@@ -22,6 +22,14 @@ function serialize(row) {
     followUp2: row.follow_up_2,
     followUp3: row.follow_up_3,
     country: row.country,
+    name: row.name,
+    packageId: row.package_id,
+    // Ikut dikirim supaya pesan follow-up bisa terisi tanpa request tambahan.
+    packageName: row.package_name || null,
+    packageDates: row.package_dates || null,
+    packagePrice: row.package_price !== undefined && row.package_price !== null
+      ? Number(row.package_price)
+      : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -29,7 +37,11 @@ function serialize(row) {
 
 async function list(req, res, next) {
   try {
-    const result = await pool.query('SELECT * FROM leads ORDER BY entry_date DESC, id DESC');
+    const result = await pool.query(
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
+       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+       ORDER BY l.entry_date DESC, l.id DESC`
+    );
     res.json({ data: result.rows.map(serialize) });
   } catch (err) {
     next(err);
@@ -51,11 +63,11 @@ async function create(req, res, next) {
     const error = validatePayload(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country } = req.body;
+    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         entryDate,
@@ -67,11 +79,21 @@ async function create(req, res, next) {
         followUp2 || null,
         followUp3 || null,
         country || null,
+        name || null,
+        packageId || null,
         req.user.id,
       ]
     );
 
-    const row = result.rows[0];
+    // Sama seperti update: baca ulang lewat join agar detail paket ikut terbawa.
+    const withPackage = await pool.query(
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
+       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+       WHERE l.id = $1`,
+      [result.rows[0].id]
+    );
+
+    const row = withPackage.rows[0];
     await logActivity(req.user.id, 'create', 'lead', row.id, `menambahkan lead "${row.whatsapp}"`);
 
     res.status(201).json({ data: serialize(row) });
@@ -90,13 +112,14 @@ async function update(req, res, next) {
     const error = validatePayload(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country } = req.body;
+    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
 
     const result = await pool.query(
       `UPDATE leads
        SET entry_date = $1, whatsapp = $2, pic_sales = $3, status = $4, notes = $5,
-           follow_up_1 = $6, follow_up_2 = $7, follow_up_3 = $8, country = $9, updated_at = NOW()
-       WHERE id = $10
+           follow_up_1 = $6, follow_up_2 = $7, follow_up_3 = $8, country = $9,
+           name = $10, package_id = $11, updated_at = NOW()
+       WHERE id = $12
        RETURNING *`,
       [
         entryDate,
@@ -108,11 +131,21 @@ async function update(req, res, next) {
         followUp2 || null,
         followUp3 || null,
         country || null,
+        name || null,
+        packageId || null,
         req.params.id,
       ]
     );
 
-    const row = result.rows[0];
+    // Baca ulang lewat join supaya respons membawa detail paket seperti list().
+    const withPackage = await pool.query(
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
+       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+       WHERE l.id = $1`,
+      [req.params.id]
+    );
+
+    const row = withPackage.rows[0];
     await logActivity(req.user.id, 'update', 'lead', row.id, `mengedit lead "${row.whatsapp}"`);
 
     res.json({ data: serialize(row) });
@@ -132,6 +165,11 @@ async function bulkCreate(req, res, next) {
     let imported = 0;
     const errors = [];
 
+    // File Excel menyebut paket dengan namanya, bukan id. Ambil sekali di awal
+    // supaya tidak query per baris.
+    const pkgRows = await client.query('SELECT id, name FROM packages');
+    const packageByName = new Map(pkgRows.rows.map((p) => [p.name.trim().toLowerCase(), p.id]));
+
     await client.query('BEGIN');
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -140,10 +178,15 @@ async function bulkCreate(req, res, next) {
         errors.push({ row: i + 1, error });
         continue;
       }
-      const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country } = row;
+      const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageName } = row;
+      // Nama paket yang tidak dikenali diabaikan saja — lebih baik lead-nya
+      // tetap masuk tanpa paket daripada seluruh barisnya ditolak.
+      const packageId = packageName
+        ? packageByName.get(String(packageName).trim().toLowerCase()) || null
+        : null;
       const result = await client.query(
-        `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING id`,
         [
           entryDate,
@@ -155,6 +198,8 @@ async function bulkCreate(req, res, next) {
           followUp2 || null,
           followUp3 || null,
           country || null,
+          name || null,
+          packageId,
           req.user.id,
         ]
       );

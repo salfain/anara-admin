@@ -38,7 +38,7 @@ const STATUS_STYLE = {
 // Kolom yang bisa disunting langsung di tabel, berurutan sesuai tampilan —
 // urutan ini juga yang dipakai tombol Tab untuk berpindah antar sel.
 const EDITABLE_FIELDS = [
-  'entryDate', 'whatsapp', 'picSales', 'status', 'country',
+  'entryDate', 'name', 'whatsapp', 'picSales', 'status', 'packageId', 'country',
   'followUp1', 'followUp2', 'followUp3', 'notes',
 ];
 
@@ -62,6 +62,8 @@ function toPayload(lead) {
     followUp2: toInputDate(lead.followUp2) || null,
     followUp3: toInputDate(lead.followUp3) || null,
     country: lead.country || null,
+    name: lead.name || null,
+    packageId: lead.packageId || null,
   };
 }
 
@@ -97,6 +99,7 @@ export default function Leads() {
   const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [sendTarget, setSendTarget] = useState(null);
   const [marking, setMarking] = useState(false);
   const [editingCell, setEditingCell] = useState(null); // { id, field }
@@ -124,6 +127,7 @@ export default function Leads() {
       .catch(() => {});
     api.get('/packages')
       .then(({ data }) => {
+        setPackages(data.data);
         const names = [...new Set(data.data.map((p) => p.destination).filter(Boolean))].sort();
         setCountryOptions(names);
       })
@@ -143,9 +147,15 @@ export default function Leads() {
       }
       if (!search) return true;
       const q = search.toLowerCase();
-      return [l.whatsapp, l.picSales, l.notes, l.country].filter(Boolean).join(' ').toLowerCase().includes(q);
+      return [l.whatsapp, l.name, l.picSales, l.notes, l.country, l.packageName]
+        .filter(Boolean).join(' ').toLowerCase().includes(q);
     });
   }, [leads, search, statusFilter, picFilter, monthFilter, fuFilter]);
+
+  const packageOptions = useMemo(
+    () => [{ value: '', label: '— tanpa paket —' }, ...packages.map((p) => ({ value: String(p.id), label: p.name }))],
+    [packages]
+  );
 
   const fuCounts = useMemo(() => {
     let due = 0, overdue = 0;
@@ -216,6 +226,8 @@ export default function Leads() {
     try {
       const payload = {
         entryDate: form.entryDate,
+        name: form.name.trim() || null,
+        packageId: form.packageId ? Number(form.packageId) : null,
         whatsapp: form.whatsapp.trim(),
         picSales: form.picSales.trim() || null,
         status: form.status,
@@ -260,7 +272,22 @@ export default function Leads() {
     if (field === 'entryDate' && !value) return push('Tanggal masuk wajib diisi', 'error');
     if (field === 'whatsapp' && !value) return push('Nomor WhatsApp wajib diisi', 'error');
 
-    const updated = { ...lead, [field]: value || null };
+    // Paket disimpan sebagai id; <select> selalu memberi string.
+    const parsed = field === 'packageId' ? (value ? Number(value) : null) : value || null;
+    const chosen = field === 'packageId' ? packages.find((p) => p.id === parsed) : null;
+    const updated = {
+      ...lead,
+      [field]: parsed,
+      ...(field === 'packageId'
+        ? {
+            packageName: chosen?.name || null,
+            packageDates: chosen?.dates || null,
+            packagePrice: chosen?.price ?? null,
+            // Destinasi ikut paket kalau lead-nya belum punya.
+            country: lead.country || chosen?.destination || null,
+          }
+        : {}),
+    };
     setEditingCell(null);
     opts?.then?.();
     // Show the new value straight away; the request is a formality the user
@@ -268,7 +295,7 @@ export default function Leads() {
     setLeads((prev) => prev.map((l) => (l.id === lead.id ? updated : l)));
     setRowBusy(lead.id);
     try {
-      const { data } = await api.put(`/leads/${lead.id}`, { ...toPayload(lead), [field]: value || null });
+      const { data } = await api.put(`/leads/${lead.id}`, toPayload(updated));
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? data.data : l)));
     } catch (err) {
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
@@ -281,6 +308,8 @@ export default function Leads() {
   async function handleInlineCreate(row) {
     const payload = {
       entryDate: row.entryDate,
+      name: row.name.trim() || null,
+      packageId: row.packageId ? Number(row.packageId) : null,
       whatsapp: row.whatsapp.trim(),
       picSales: row.picSales.trim() || null,
       status: row.status,
@@ -505,27 +534,31 @@ export default function Leads() {
       </div>
 
       <div className="hidden lg:block bg-surface border border-gray-med rounded-xl overflow-x-auto">
-        <table className="w-full min-w-[900px] text-xs table-fixed">
+        <table className="w-full min-w-[1180px] text-xs table-fixed">
           <colgroup>
             <col className="w-[3%]" />
-            <col className="w-[8%]" />
-            <col className="w-[13%]" />
+            <col className="w-[7%]" />
             <col className="w-[10%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
+            <col className="w-[11%]" />
             <col className="w-[7%]" />
             <col className="w-[7%]" />
-            <col className="w-[7%]" />
-            <col className="w-[19%]" />
+            <col className="w-[11%]" />
             <col className="w-[8%]" />
+            <col className="w-[6%]" />
+            <col className="w-[6%]" />
+            <col className="w-[6%]" />
+            <col className="w-[11%]" />
+            <col className="w-[7%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-gray-med bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary sticky top-0 z-10">
               <th className="text-left px-2 py-2.5">No.</th>
               <th className="text-left px-2 py-2.5">Masuk</th>
+              <th className="text-left px-2 py-2.5">Nama</th>
               <th className="text-left px-2 py-2.5">No. WhatsApp</th>
               <th className="text-left px-2 py-2.5">PIC</th>
               <th className="text-left px-2 py-2.5">Status</th>
+              <th className="text-left px-2 py-2.5">Paket</th>
               <th className="text-left px-2 py-2.5">Destinasi</th>
               <th className="text-left px-2 py-2.5">FU 1</th>
               <th className="text-left px-2 py-2.5">FU 2</th>
@@ -535,9 +568,9 @@ export default function Leads() {
             </tr>
           </thead>
           <tbody>
-            {loading && <SkeletonRows rows={6} cols={11} />}
+            {loading && <SkeletonRows rows={6} cols={13} />}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
+              <tr><td colSpan={13} className="text-center text-sm text-secondary py-16">
                 {fuFilter !== 'all'
                   ? 'Tidak ada lead yang perlu di-follow-up. '
                   : search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all'
@@ -549,7 +582,7 @@ export default function Leads() {
               const cell = (field, props) => (
                 <EditableCell
                   {...props}
-                  value={DATE_FIELDS.has(field) ? toInputDate(l[field]) : l[field] || ''}
+                  value={DATE_FIELDS.has(field) ? toInputDate(l[field]) : (l[field] ?? '') === '' ? '' : String(l[field])}
                   editing={editingCell?.id === l.id && editingCell?.field === field}
                   disabled={!canManage}
                   onStartEdit={() => setEditingCell({ id: l.id, field })}
@@ -568,6 +601,7 @@ export default function Leads() {
                     </span>
                   </td>
                   {cell('entryDate', { type: 'date', className: 'text-gray-dark', display: fmtDate(l.entryDate) })}
+                  {cell('name', { className: 'text-gray-dark', display: l.name || '-', placeholder: 'Nama customer' })}
                   {cell('whatsapp', { className: 'text-gray-dark font-medium', display: l.whatsapp })}
                   {cell('picSales', {
                     type: 'combo', options: picFilterOptions, listId: `pic-${l.id}`,
@@ -583,6 +617,10 @@ export default function Leads() {
                         {l.status}
                       </span>
                     ),
+                  })}
+                  {cell('packageId', {
+                    type: 'select', options: packageOptions,
+                    className: 'text-secondary', display: l.packageName || '-',
                   })}
                   {cell('country', {
                     type: 'combo', options: countryOptions, listId: `country-${l.id}`,
@@ -621,6 +659,7 @@ export default function Leads() {
               <NewLeadRow
                 picOptions={picFilterOptions}
                 countryOptions={countryOptions}
+                packageOptions={packageOptions}
                 onCreate={handleInlineCreate}
                 onError={(msg) => push(msg, 'error')}
               />
@@ -659,6 +698,7 @@ export default function Leads() {
         saving={saving}
         picOptions={picOptions}
         countryOptions={countryOptions}
+        packageOptions={packageOptions}
       />
 
       <ConfirmDialog
@@ -677,9 +717,11 @@ export default function Leads() {
  * The always-present blank row at the foot of the table. Fill in a date and a
  * number, press Enter from any field, and the lead is created — no dialog.
  */
-function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
+function NewLeadRow({ picOptions, countryOptions, packageOptions, onCreate, onError }) {
   const EMPTY = {
     entryDate: new Date().toISOString().slice(0, 10),
+    name: '',
+    packageId: '',
     whatsapp: '',
     picSales: '',
     status: 'Baru',
@@ -728,6 +770,9 @@ function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
         <input type="date" value={row.entryDate} onChange={set('entryDate')} onKeyDown={onKeyDown} className={input} />
       </td>
       <td className="px-1 py-1">
+        <input value={row.name} onChange={set('name')} onKeyDown={onKeyDown} placeholder="Nama" className={input} />
+      </td>
+      <td className="px-1 py-1">
         <input
           ref={waRef}
           value={row.whatsapp}
@@ -744,6 +789,11 @@ function NewLeadRow({ picOptions, countryOptions, onCreate, onError }) {
       <td className="px-1 py-1">
         <select value={row.status} onChange={set('status')} onKeyDown={onKeyDown} className={input}>
           {LEAD_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
+        </select>
+      </td>
+      <td className="px-1 py-1">
+        <select value={row.packageId} onChange={set('packageId')} onKeyDown={onKeyDown} className={input}>
+          {packageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </td>
       <td className="px-1 py-1">
