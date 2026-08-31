@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import useThemeStore from '../store/themeStore';
 import usePermissions from '../hooks/usePermissions';
+import Skeleton from '../components/Skeleton';
 
 const STATUS_COLORS = {
   Baru: '#2563eb',
@@ -69,7 +70,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading && Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface border border-gray-med rounded-xl p-6 h-[92px] animate-pulse" />
+          <div key={i} className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-1.5">
+            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-3.5 w-24" />
+          </div>
         ))}
         {!loading && metrics.map((m) => (
           <div key={m.label} className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-1.5 transition-shadow hover:shadow-lg">
@@ -110,7 +114,7 @@ export default function Dashboard() {
             <div className="text-xs text-secondary mt-0.5">6 bulan terakhir · Laporan Follow Up</div>
           </div>
           {!leadsSummary ? (
-            <div className="text-sm text-secondary">Memuat...</div>
+            <Skeleton className="w-full" style={{ height: 220 }} />
           ) : monthlyChart.every((m) => m.count === 0) ? (
             <div className="text-sm text-secondary">Belum ada data lead.</div>
           ) : (
@@ -130,7 +134,7 @@ export default function Dashboard() {
         <div className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-4">
           <div className="text-base font-semibold text-gray-dark">Status Lead</div>
           {!leadsSummary ? (
-            <div className="text-sm text-secondary">Memuat...</div>
+            <Skeleton className="w-full" style={{ height: 160 }} />
           ) : totalLeads === 0 ? (
             <div className="text-sm text-secondary">Belum ada data lead.</div>
           ) : (
@@ -166,7 +170,13 @@ export default function Dashboard() {
           <div className="text-base font-semibold text-gray-dark">Balasan Paling Sering Digunakan</div>
           <Link to="/quick-replies" className="text-[13px] font-semibold" style={{ color: '#2563eb' }}>Lihat semua</Link>
         </div>
-        {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
+        {loading &&
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={`px-6 py-3.5 flex items-center gap-3 ${i > 0 ? 'border-t border-gray-med' : ''}`}>
+              <Skeleton className="h-3.5 flex-1" />
+              <Skeleton className="h-3.5 w-10 shrink-0" />
+            </div>
+          ))}
         {!loading && (stats?.topReplies || []).length === 0 && (
           <div className="text-center text-sm text-secondary py-10">Belum ada balasan.</div>
         )}

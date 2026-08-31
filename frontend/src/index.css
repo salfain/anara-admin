@@ -53,6 +53,43 @@
   color-scheme: dark;
 }
 
+/* Skeleton placeholders. The sweep sits on top of a flat base tint so the
+   effect reads on both themes without needing two sets of colors. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-gray-med);
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-surface) 70%, transparent),
+    transparent
+  );
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Respect users who ask the OS to cut down on motion: keep the placeholder,
+   drop the sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}
+
 /* Tick marks default to a washed-out grey in both themes; the brand blue reads
    as deliberate and keeps the permission checkboxes legible on dark surfaces. */
 input[type="checkbox"],

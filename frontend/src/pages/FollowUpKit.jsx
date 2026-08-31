@@ -7,6 +7,7 @@ import FollowUpTemplateModal from '../components/FollowUpTemplateModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { CADENCE } from '../data/followUpTemplates';
 import usePermissions from '../hooks/usePermissions';
+import { SkeletonCards } from '../components/Skeleton';
 
 function highlight(text) {
   const parts = text.split(/(\[[^\]]+\])/g);
@@ -310,7 +311,7 @@ export default function FollowUpKit() {
       </div>
 
       <div className="flex flex-col gap-5">
-        {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
+        {loading && <SkeletonCards count={3} />}
         {!loading && filtered.length === 0 && (
           <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
             {search ? `Tidak ada template yang cocok dengan "${search}".` : 'Belum ada template.'}

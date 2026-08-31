@@ -7,6 +7,7 @@ import LeadModal, { LEAD_STATUSES } from '../components/LeadModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LeadDetailSheet from '../components/LeadDetailSheet';
 import usePermissions from '../hooks/usePermissions';
+import Skeleton, { SkeletonRows } from '../components/Skeleton';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -291,9 +292,13 @@ export default function Leads() {
 
       {/* Mobile: stacked cards. An 11-column table is unreadable at phone width. */}
       <div className="lg:hidden flex flex-col gap-3">
-        {loading && (
-          <div className="bg-surface border border-gray-med rounded-xl py-10 text-center text-sm text-secondary">Memuat...</div>
-        )}
+        {loading &&
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-surface border border-gray-med rounded-xl px-4 py-3 flex items-center gap-3">
+              <Skeleton className="h-3.5 flex-1" />
+              <Skeleton className="h-5 w-16 rounded-full shrink-0" />
+            </div>
+          ))}
         {!loading && filtered.length === 0 && (
           <div className="bg-surface border border-gray-med rounded-xl py-12 text-center text-sm text-secondary">
             {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
@@ -370,9 +375,7 @@ export default function Leads() {
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={11} className="text-center text-sm text-secondary py-10">Memuat...</td></tr>
-            )}
+            {loading && <SkeletonRows rows={6} cols={11} />}
             {!loading && filtered.length === 0 && (
               <tr><td colSpan={11} className="text-center text-sm text-secondary py-16">
                 {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}

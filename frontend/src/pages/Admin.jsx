@@ -6,6 +6,7 @@ import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
+import Skeleton, { SkeletonText, SkeletonRows } from '../components/Skeleton';
 
 const TABS = [
   { key: 'users', label: 'Users', permission: 'admin.users' },
@@ -197,7 +198,7 @@ function UsersTab({ currentUser }) {
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={6} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>
+                <SkeletonRows rows={5} cols={6} />
               )}
               {!loading && users.map((u) => (
                 <tr key={u.id}>
@@ -628,7 +629,14 @@ function RolesTab({ currentUser }) {
       </form>
 
       {loading ? (
-        <div className="text-sm text-secondary text-center py-10">Memuat...</div>
+        <div className="flex gap-4 flex-wrap items-start">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex-1 min-w-[280px] bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+              <Skeleton className="h-4 w-32" />
+              <SkeletonText lines={3} />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="flex gap-4 flex-wrap items-start">
           {roles.map((role) => (
@@ -718,7 +726,21 @@ function PermissionsTab({ currentUser }) {
   }
 
   if (loading) {
-    return <div className="text-sm text-secondary text-center py-10">Memuat...</div>;
+    return (
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="w-full lg:w-64 bg-surface border border-gray-med rounded-xl p-4 flex flex-col gap-3 shrink-0">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-4" />)}
+        </div>
+        <div className="flex-1 w-full flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-surface border border-gray-med rounded-xl p-5 flex flex-col gap-3">
+              <Skeleton className="h-4 w-40" />
+              <SkeletonText lines={3} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -948,7 +970,7 @@ function CategoriesTab() {
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
+            {loading && <SkeletonRows rows={4} cols={3} />}
             {!loading && categories.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-3 border-b border-gray-med">
@@ -1109,7 +1131,7 @@ function PackagesTab() {
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={3} className="text-sm text-secondary text-center py-8">Memuat...</td></tr>}
+            {loading && <SkeletonRows rows={4} cols={3} />}
             {!loading && packages.map((p) => (
               <tr key={p.id}>
                 <td className="text-sm text-gray-dark font-medium px-4 py-3 border-b border-gray-med">{p.name}</td>

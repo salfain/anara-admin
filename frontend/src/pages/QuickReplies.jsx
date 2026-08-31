@@ -8,6 +8,7 @@ import ReplyDetailModal from '../components/ReplyDetailModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
+import { SkeletonCards } from '../components/Skeleton';
 
 export default function QuickReplies() {
   const push = useToastStore((s) => s.push);
@@ -209,7 +210,7 @@ export default function QuickReplies() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
+          {loading && <SkeletonCards count={4} />}
           {!loading && replies.length === 0 && (
             <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
               Belum ada quick reply yang cocok. Coba ubah pencarian atau filter.

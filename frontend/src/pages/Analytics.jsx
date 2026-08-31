@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import api from '../api/client';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import useThemeStore from '../store/themeStore';
+import Skeleton from '../components/Skeleton';
 
 const PIE_COLORS = ['#2563eb', '#60a5fa', '#f59e0b', '#10b981', '#a78bfa', '#f87171'];
 
@@ -73,9 +74,9 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Replies" value={summary.totalReplies} />
-        <MetricCard label="Total Usage" value={`${summary.totalUsage}x`} />
-        <MetricCard label="Active Users" value={summary.activeUsers} />
+        <MetricCard label="Total Replies" value={summary.totalReplies} loading={loading} />
+        <MetricCard label="Total Usage" value={`${summary.totalUsage}x`} loading={loading} />
+        <MetricCard label="Active Users" value={summary.activeUsers} loading={loading} />
         <MetricCard label="System Uptime" value="99.8%" />
       </div>
 
@@ -83,7 +84,7 @@ export default function Analytics() {
         <div className="bg-surface rounded-xl p-6 flex flex-col gap-4">
           <div className="text-base font-semibold text-gray-dark">Top 10 Pertanyaan</div>
           {loading ? (
-            <div className="text-sm text-secondary">Memuat...</div>
+            <Skeleton className="w-full" style={{ height: 200 }} />
           ) : topQuestions.length === 0 ? (
             <div className="text-sm text-secondary">Belum ada data pada periode ini.</div>
           ) : (
@@ -109,7 +110,7 @@ export default function Analytics() {
         <div className="bg-surface rounded-xl p-6 flex flex-col gap-4">
           <div className="text-base font-semibold text-gray-dark">Distribusi Kategori</div>
           {loading ? (
-            <div className="text-sm text-secondary">Memuat...</div>
+            <Skeleton className="w-full" style={{ height: 180 }} />
           ) : categories.length === 0 ? (
             <div className="text-sm text-secondary">Belum ada data pada periode ini.</div>
           ) : (
@@ -170,11 +171,15 @@ export default function Analytics() {
   );
 }
 
-function MetricCard({ label, value }) {
+function MetricCard({ label, value, loading }) {
   return (
     <div className="bg-surface rounded-xl p-6 flex flex-col gap-2 transition-shadow hover:shadow-lg">
       <div className="text-xs font-semibold uppercase tracking-wide text-secondary">{label}</div>
-      <div className="text-[32px] font-bold text-gray-dark">{value}</div>
+      {loading ? (
+        <Skeleton className="h-8 w-24 my-1" />
+      ) : (
+        <div className="text-[32px] font-bold text-gray-dark">{value}</div>
+      )}
     </div>
   );
 }

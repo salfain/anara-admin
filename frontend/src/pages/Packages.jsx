@@ -5,6 +5,7 @@ import useToastStore from '../store/toastStore';
 import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
+import { SkeletonCards } from '../components/Skeleton';
 
 export default function Packages() {
   const { can } = usePermissions();
@@ -128,7 +129,7 @@ export default function Packages() {
       </div>
 
       <div className="flex flex-col gap-3">
-        {loading && <div className="text-center text-sm text-secondary py-10">Memuat...</div>}
+        {loading && <SkeletonCards count={3} />}
         {!loading && files.length === 0 && (
           <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
             Belum ada file itinerary yang diupload.
