@@ -12,11 +12,19 @@ export function toWaNumber(raw) {
   return digits;
 }
 
-export function waLink(number, message) {
+/**
+ * Tautan ke chat-nya saja, TANPA parameter ?text=.
+ *
+ * Pesannya sengaja tidak dititipkan lewat URL: emoji rusak jadi "�" di sisi
+ * WhatsApp meski percent-encoding-nya benar (%F0%9F%98%8A). Terbukti dengan
+ * membandingkan — teks yang sama, ditempel dari clipboard, sampai utuh.
+ * Template follow-up penuh emoji, jadi jalur itu tidak bisa dipakai.
+ * Pesannya disalin ke clipboard, lalu ditempel di kotak chat.
+ */
+export function waLink(number) {
   const to = toWaNumber(number);
   if (!to) return null;
-  const text = message ? `?text=${encodeURIComponent(message)}` : '';
-  return `https://wa.me/${to}${text}`;
+  return `https://wa.me/${to}`;
 }
 
 /**

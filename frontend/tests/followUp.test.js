@@ -25,8 +25,17 @@ test('nomor yang diketik bebas dirapikan untuk wa.me', () => {
 });
 
 test('tautan hanya dibuat kalau nomornya masuk akal', () => {
-  assert.equal(waLink('abc', 'hai'), null);
-  assert.equal(waLink('08123', 'Halo Kak'), 'https://wa.me/628123?text=Halo%20Kak');
+  assert.equal(waLink('abc'), null);
+  assert.equal(waLink('08123'), 'https://wa.me/628123');
+});
+
+test('pesan tidak pernah dititipkan lewat URL', () => {
+  // WhatsApp merusak emoji pada parameter ?text= walaupun percent-encoding-nya
+  // benar. Pesannya lewat clipboard; kalau ada yang mengembalikan ?text= lagi,
+  // emoji di seluruh template akan rusak lagi tanpa terlihat.
+  const link = waLink('08123', 'salam kenal ya 😊');
+  assert.equal(link, 'https://wa.me/628123');
+  assert.doesNotMatch(link, /text=/);
 });
 
 test('hanya placeholder yang nilainya kita tahu yang diisi', () => {

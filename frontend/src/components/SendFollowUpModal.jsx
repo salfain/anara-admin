@@ -50,7 +50,7 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
   if (!open || !lead) return null;
 
   const number = toWaNumber(lead.whatsapp);
-  const link = waLink(lead.whatsapp, message);
+  const link = waLink(lead.whatsapp);
 
   function pick(snippet) {
     setActiveId(snippet.id);
@@ -74,10 +74,21 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
     }
   }
 
+  // Salin dulu, baru buka chat. Keduanya dipanggil di tick yang sama supaya
+  // masih terhitung sebagai satu gestur pengguna — kalau ditunggu (await),
+  // pemblokir popup bisa menolak jendelanya.
   function openWhatsApp() {
     if (!link) return push('Nomor WhatsApp tidak valid', 'error');
+    const copying = navigator.clipboard?.writeText(message);
     window.open(link, '_blank', 'noopener');
     setOpened(true);
+
+    if (!copying) {
+      return push('Chat dibuka. Salin pesannya dulu dengan tombol Salin.', 'error');
+    }
+    copying
+      .then(() => push('Pesan disalin — tempel di WhatsApp dengan Ctrl+V'))
+      .catch(() => push('Chat dibuka, tapi gagal menyalin. Pakai tombol Salin.', 'error'));
   }
 
   return (
@@ -156,6 +167,10 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
             <div className="text-[11px] text-secondary">
               Placeholder yang datanya kita punya sudah terisi. Sisanya masih dalam kurung siku — isi dulu sebelum kirim.
             </div>
+            <div className="text-[11px] rounded-lg px-3 py-2" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
+              Tombol di bawah menyalin pesan ini lalu membuka chat-nya — tinggal tempel (Ctrl+V) dan kirim.
+              Emoji rusak kalau pesannya dititipkan lewat alamat WhatsApp, jadi lewat clipboard.
+            </div>
           </div>
         </div>
 
@@ -207,7 +222,7 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
               style={{ background: '#25D366' }}
             >
               <Send size={14} />
-              Buka WhatsApp
+              Salin &amp; Buka WhatsApp
             </button>
           </div>
         </div>
