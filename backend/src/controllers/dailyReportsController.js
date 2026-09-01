@@ -119,4 +119,81 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, save, remove };
+/**
+ * Satu hari penuh: semua CS aktif sekaligus, lengkap dengan angka hitungan.
+ *
+ * Sebelumnya admin harus membuat baris satu per satu untuk tiap CS tiap hari.
+ * Barisnya sekarang selalu ada, karena orangnya memang selalu ada. Yang
+ * membedakan hanya sudah disimpan atau belum.
+ *
+ * Nilai hitungan tetap dikirim walau laporannya sudah tersimpan, supaya
+ * selisihnya terlihat kalau angka yang dicatat berbeda dengan data lead.
+ */
+async function day(req, res, next) {
+  try {
+    const tanggal = req.query.date || new Date().toISOString().slice(0, 10);
+
+    const [users, tersimpan, baru, closing, difollowup, perPaket] = await Promise.all([
+      pool.query(`SELECT id, name FROM users WHERE status = 'active' ORDER BY name ASC`),
+      pool.query(`SELECT * FROM daily_reports WHERE report_date = $1::date`, [tanggal]),
+      pool.query(
+        `SELECT pic_user_id AS uid, COUNT(*)::int AS n FROM leads
+         WHERE entry_date = $1::date AND pic_user_id IS NOT NULL GROUP BY 1`,
+        [tanggal]
+      ),
+      pool.query(
+        `SELECT pic_user_id AS uid, COUNT(*)::int AS n FROM leads
+         WHERE won_at::date = $1::date AND pic_user_id IS NOT NULL GROUP BY 1`,
+        [tanggal]
+      ),
+      pool.query(
+        `SELECT pic_user_id AS uid, COUNT(*)::int AS n FROM leads
+         WHERE $1::date IN (follow_up_1, follow_up_2, follow_up_3)
+           AND pic_user_id IS NOT NULL GROUP BY 1`,
+        [tanggal]
+      ),
+      pool.query(
+        `SELECT l.pic_user_id AS uid, COALESCE(p.name, l.country, 'Belum ditentukan') AS label,
+                COUNT(*)::int AS n
+         FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+         WHERE l.entry_date = $1::date AND l.pic_user_id IS NOT NULL
+         GROUP BY 1, 2 ORDER BY n DESC`,
+        [tanggal]
+      ),
+    ]);
+
+    const angkaPer = (rows) => new Map(rows.map((r) => [r.uid, r.n]));
+    const nBaru = angkaPer(baru.rows);
+    const nClosing = angkaPer(closing.rows);
+    const nFollowup = angkaPer(difollowup.rows);
+    const simpanPer = new Map(tersimpan.rows.map((r) => [r.user_id, r]));
+
+    const rincianPer = new Map();
+    for (const r of perPaket.rows) {
+      if (!rincianPer.has(r.uid)) rincianPer.set(r.uid, []);
+      rincianPer.get(r.uid).push(`${r.label} = ${r.n}`);
+    }
+
+    const data = users.rows.map((u) => {
+      const row = simpanPer.get(u.id);
+      const hitung = {
+        newLeads: nBaru.get(u.id) || 0,
+        totalClosing: nClosing.get(u.id) || 0,
+        totalFollowup: nFollowup.get(u.id) || 0,
+        breakdown: (rincianPer.get(u.id) || []).join('\n'),
+      };
+      return {
+        userId: u.id,
+        picName: u.name,
+        saved: row ? serialize(row) : null,
+        computed: hitung,
+      };
+    });
+
+    res.json({ data: { date: tanggal, rows: data } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, save, remove, day };

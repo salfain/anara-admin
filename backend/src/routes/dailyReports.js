@@ -6,6 +6,8 @@ const router = express.Router();
 
 // Membaca laporan cukup dengan hak lihat lead; mengisinya butuh hak kelola.
 router.get('/', authenticate, requirePermission('leads.view'), controller.list);
+// Sebelum rute lain supaya 'day' tidak terbaca sebagai sesuatu yang lain.
+router.get('/day', authenticate, requirePermission('leads.view'), controller.day);
 router.post('/', authenticate, requirePermission('leads.manage'), controller.save);
 router.delete('/:id', authenticate, requirePermission('leads.manage'), controller.remove);
 

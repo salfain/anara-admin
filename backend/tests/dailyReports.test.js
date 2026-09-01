@@ -105,3 +105,49 @@ test('removing a CS takes their reports with them', async () => {
   const sisa = await pool.query('SELECT count(*)::int AS n FROM daily_reports');
   assert.equal(sisa.rows[0].n, 0, 'jangan tinggalkan laporan tanpa pemilik');
 });
+
+test('one day returns every active CS, saved or not', async () => {
+  await pool.query('DELETE FROM daily_reports');
+  await pool.query(`INSERT INTO users (id, email, name, role, status) VALUES
+    (3, 'dita@t.id', 'Dita', 'cs', 'active'),
+    (4, 'lama@t.id', 'Sudah Keluar', 'cs', 'pending') ON CONFLICT DO NOTHING`);
+
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  const nama = data.rows.map((r) => r.picName);
+
+  // Barisnya selalu ada, karena orangnya memang selalu ada. Tidak ada langkah
+  // membuat baris lebih dulu.
+  assert.ok(nama.includes('Admin'));
+  assert.ok(nama.includes('Dita'));
+  assert.ok(!nama.includes('Sudah Keluar'), 'yang belum aktif tidak ikut');
+  assert.equal(data.rows.every((r) => r.saved === null), true);
+});
+
+test('computed figures arrive as a starting point', async () => {
+  await pool.query('DELETE FROM daily_reports');
+  await pool.query('DELETE FROM leads');
+  await pool.query(`INSERT INTO packages (name) VALUES ('Korea') ON CONFLICT DO NOTHING`);
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  for (let i = 0; i < 2; i++) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, pic_user_id, package_id) VALUES ('2026-09-01', '628', 3, $1)`,
+      [pkg]
+    );
+  }
+
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  const dita = data.rows.find((r) => r.picName === 'Dita');
+  assert.equal(dita.computed.newLeads, 2);
+  assert.equal(dita.computed.breakdown, 'Korea = 2');
+  assert.equal(dita.saved, null, 'belum disimpan sampai admin menyimpannya');
+});
+
+test('a saved report is returned alongside what the data says', async () => {
+  await call('POST', '/daily-reports', { reportDate: '2026-09-01', userId: 3, newLeads: 5 });
+
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  const dita = data.rows.find((r) => r.picName === 'Dita');
+  assert.equal(dita.saved.newLeads, 5, 'yang tersimpan yang berlaku');
+  // Hitungannya tetap dikirim, supaya selisihnya bisa terlihat.
+  assert.equal(dita.computed.newLeads, 2);
+});
