@@ -232,4 +232,56 @@ async function sales(req, res, next) {
   }
 }
 
-module.exports = { summary, topQuestions, categories, usageTrend, teamStats, sales };
+/**
+ * Konversi bulan demi bulan — arahnya, bukan potretnya.
+ *
+ * Selalu 12 bulan terakhir, tidak ikut rentang di tab Penjualan: menyaring
+ * tren ke satu bulan hanya menyisakan satu titik, dan itu bukan tren.
+ */
+async function salesTrend(req, res, next) {
+  try {
+    const months = Math.min(Math.max(parseInt(req.query.months, 10) || 12, 3), 24);
+
+    const result = await pool.query(
+      `SELECT to_char(date_trunc('month', entry_date), 'YYYY-MM') AS month,
+              COUNT(*)::int AS leads,
+              COUNT(*) FILTER (WHERE status = 'Sudah DP')::int AS won,
+              COUNT(*) FILTER (WHERE status = 'Batal')::int AS lost
+       FROM leads
+       WHERE entry_date >= date_trunc('month', CURRENT_DATE) - make_interval(months => $1)
+       GROUP BY 1 ORDER BY 1`,
+      [months - 1]
+    );
+
+    const byMonth = new Map(result.rows.map((r) => [r.month, r]));
+
+    // Bulan tanpa lead tetap ditampilkan, kalau tidak sumbu waktunya melompat
+    // dan jeda sepi justru tidak terlihat.
+    const data = [];
+    const cursor = new Date();
+    cursor.setDate(1);
+    cursor.setMonth(cursor.getMonth() - (months - 1));
+    for (let i = 0; i < months; i++) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+      const row = byMonth.get(key);
+      const won = row?.won || 0;
+      const lost = row?.lost || 0;
+      const selesai = won + lost;
+      data.push({
+        month: key,
+        leads: row?.leads || 0,
+        won,
+        lost,
+        // null, bukan 0 — bulan yang belum ada hasilnya bukan bulan yang gagal.
+        conversion: selesai > 0 ? Math.round((won / selesai) * 100) : null,
+      });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { summary, topQuestions, categories, usageTrend, teamStats, sales, salesTrend };

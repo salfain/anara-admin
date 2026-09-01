@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  ComposedChart, Line, Legend,
+} from 'recharts';
 import api from '../api/client';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import useThemeStore from '../store/themeStore';
@@ -235,11 +238,19 @@ function SalesTab({ tickColor }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState('all');
+  const [trend, setTrend] = useState([]);
 
   const fetchSales = useCallback((showLoading = true) => {
     if (showLoading) setLoading(true);
-    return api.get('/analytics/sales', { params: salesRangeParams(range) })
-      .then(({ data: res }) => setData(res.data))
+    return Promise.all([
+      api.get('/analytics/sales', { params: salesRangeParams(range) }),
+      // Trennya selalu 12 bulan terakhir, tidak ikut rentang di atas.
+      api.get('/analytics/sales-trend', { params: { months: 12 } }),
+    ])
+      .then(([s, t]) => {
+        setData(s.data.data);
+        setTrend(t.data.data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [range]);
@@ -294,6 +305,8 @@ function SalesTab({ tickColor }) {
             ` Rata-rata waktu masih dari ${data.timeToWin.sample} lead saja — belum bisa dijadikan patokan.`}
         </div>
       )}
+
+      <ConversionTrend rows={trend} loading={loading} tickColor={tickColor} />
 
       <SalesTable
         title="Per Paket"
@@ -388,6 +401,85 @@ function SalesTable({ title, hint, rows, loading, headLabel }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+function labelBulan(key) {
+  const [tahun, bulan] = key.split('-');
+  return `${NAMA_BULAN[parseInt(bulan, 10) - 1]} ${tahun.slice(2)}`;
+}
+
+/**
+ * Batang untuk jumlah lead, garis untuk konversi — dua satuan yang berbeda,
+ * jadi dua sumbu. Yang dicari di sini arahnya, bukan angka satu bulan.
+ */
+function ConversionTrend({ rows, loading, tickColor }) {
+  const data = (rows || []).map((r) => ({ ...r, label: labelBulan(r.month) }));
+  const adaKonversi = data.some((d) => d.conversion !== null);
+
+  return (
+    <div className="bg-surface rounded-xl p-6 flex flex-col gap-4 border border-gray-med">
+      <div>
+        <div className="text-base font-semibold text-gray-dark">Tren Konversi</div>
+        <div className="text-xs text-secondary mt-1 max-w-[620px]">
+          12 bulan terakhir, terlepas dari periode yang dipilih di atas — satu bulan saja bukan tren.
+          Bulan tanpa lead yang selesai dibiarkan kosong, bukan digambar 0%.
+        </div>
+      </div>
+
+      {loading ? (
+        <Skeleton className="w-full" style={{ height: 260 }} />
+      ) : !adaKonversi ? (
+        <div className="text-sm text-secondary py-8 text-center">
+          Belum ada lead yang selesai, jadi belum ada tren yang bisa digambar.
+        </div>
+      ) : (
+        <div style={{ height: 280 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={{ left: -16, right: 8 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: tickColor }} axisLine={false} tickLine={false} />
+              <YAxis
+                yAxisId="jumlah"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: tickColor }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                yAxisId="persen"
+                orientation="right"
+                domain={[0, 100]}
+                unit="%"
+                tick={{ fontSize: 11, fill: tickColor }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                formatter={(value, name) =>
+                  name === 'Konversi' ? [`${value}%`, name] : [value, name]
+                }
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar yAxisId="jumlah" dataKey="leads" name="Lead masuk" fill="#93c5fd" radius={[4, 4, 0, 0]} barSize={22} />
+              <Bar yAxisId="jumlah" dataKey="won" name="Closing" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={22} />
+              <Line
+                yAxisId="persen"
+                type="monotone"
+                dataKey="conversion"
+                name="Konversi"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                // Bulan tanpa hasil diloncati, bukan ditarik turun ke nol.
+                connectNulls
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

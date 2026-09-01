@@ -331,3 +331,32 @@ test('the sales range filters by when the lead arrived', async () => {
   assert.equal(agustus.data.byPic[0].leads, 1);
   assert.equal(agustus.data.byPic[0].won, 0, 'closing bulan Juni tidak boleh ikut');
 });
+
+test('the trend shows every month, including the quiet ones', async () => {
+  await pool.query('DELETE FROM leads');
+  const bulanLalu = new Date();
+  bulanLalu.setDate(1);
+  bulanLalu.setMonth(bulanLalu.getMonth() - 1);
+  const kunci = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const tanggal = `${kunci(bulanLalu)}-05`;
+
+  for (const status of ['Sudah DP', 'Sudah DP', 'Batal', 'Nego']) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, status) VALUES ($1, '628', $2)`,
+      [tanggal, status]
+    );
+  }
+
+  const { data } = await (await fetch(`${base}/analytics/sales-trend?months=6`, { headers })).json();
+  assert.equal(data.length, 6, 'bulan tanpa lead tetap muncul');
+
+  const target = data.find((d) => d.month === kunci(bulanLalu));
+  assert.equal(target.leads, 4);
+  assert.equal(target.won, 2);
+  // 2 dari 3 yang selesai — lead yang masih Nego tidak ikut membagi.
+  assert.equal(target.conversion, 67);
+
+  // Bulan sepi bukan bulan gagal, jadi bukan 0%.
+  const sepi = data.find((d) => d.leads === 0);
+  assert.equal(sepi.conversion, null);
+});
