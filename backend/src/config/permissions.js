@@ -35,6 +35,14 @@ const PERMISSION_GROUPS = [
     ],
   },
   {
+    key: 'billing',
+    label: 'Penagihan',
+    permissions: [
+      { key: 'billing.view', label: 'Lihat penagihan & peserta' },
+      { key: 'billing.manage', label: 'Kelola penagihan & peserta' },
+    ],
+  },
+  {
     key: 'analytics',
     label: 'Analytics',
     permissions: [

@@ -1,4 +1,4 @@
-import { LayoutDashboard, MessagesSquare, BarChart3, Users, FolderOpen, Send, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, BarChart3, Users, FolderOpen, Send, ClipboardList, Receipt } from 'lucide-react';
 
 // `short` is used by the mobile bottom nav, where full labels are too wide.
 // `permission` hides the item when the user's role lacks that hak akses;
@@ -9,6 +9,7 @@ export const navItems = [
   { to: '/follow-up-kit', label: 'Follow-Up Kit', short: 'Kit FU', icon: Send, permission: 'follow_up.view' },
   { to: '/leads', label: 'Laporan Follow Up', short: 'Laporan', icon: ClipboardList, permission: 'leads.view' },
   { to: '/packages', label: 'Paket & Itinerary', short: 'Paket', icon: FolderOpen, permission: 'packages.view' },
+  { to: '/billing', label: 'Penagihan', short: 'Tagihan', icon: Receipt, permission: 'billing.view' },
   { to: '/analytics', label: 'Analytics', short: 'Analitik', icon: BarChart3, permission: 'analytics.view' },
   {
     to: '/admin',

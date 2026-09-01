@@ -214,6 +214,58 @@ CREATE TABLE IF NOT EXISTS lead_notes (
 
 CREATE INDEX IF NOT EXISTS idx_lead_notes_lead ON lead_notes(lead_id, created_at DESC);
 
+-- Penagihan: tahap setelah lead closing, sampai peserta berangkat.
+--
+-- Satu invoice punya satu customer dan beberapa peserta — di spreadsheet ini
+-- terlihat sebagai sel yang digabung, dengan nomor invoice hanya diisi di
+-- baris pertama tiap grup. Di sini dipisah jadi dua tabel supaya tiap peserta
+-- punya barisnya sendiri, tanpa baris kosong yang cuma jadi template.
+CREATE TABLE IF NOT EXISTS bookings (
+  id SERIAL PRIMARY KEY,
+  departure_id INT REFERENCES package_departures(id) ON DELETE SET NULL,
+  -- Dari mana booking ini berasal. Boleh kosong: tidak semua penjualan lewat
+  -- pencatatan lead, dan data lama tidak punya jejaknya.
+  lead_id INT REFERENCES leads(id) ON DELETE SET NULL,
+  invoice_no VARCHAR(100),
+  customer_name VARCHAR(255) NOT NULL,
+  notes TEXT,
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS booking_participants (
+  id SERIAL PRIMARY KEY,
+  booking_id INT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  origin VARCHAR(100),
+  destination VARCHAR(100),
+
+  -- Kolom PENAGIHAN di spreadsheet.
+  paid_dp BOOLEAN NOT NULL DEFAULT FALSE,
+  paid_ticket BOOLEAN NOT NULL DEFAULT FALSE,
+  paid_settlement BOOLEAN NOT NULL DEFAULT FALSE,
+
+  -- Kolom BOOKING TIKET.
+  booked_outbound BOOLEAN NOT NULL DEFAULT FALSE,
+  booked_return BOOLEAN NOT NULL DEFAULT FALSE,
+
+  -- TIKET / NAMA PESAWAT / BOOKING CODE, masing-masing berangkat dan pulang.
+  ticket_outbound VARCHAR(100),
+  ticket_return VARCHAR(100),
+  airline_outbound VARCHAR(100),
+  airline_return VARCHAR(100),
+  code_outbound VARCHAR(100),
+  code_return VARCHAR(100),
+
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_departure ON bookings(departure_id);
+CREATE INDEX IF NOT EXISTS idx_participants_booking ON booking_participants(booking_id, sort_order);
+
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
 CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
 CREATE INDEX IF NOT EXISTS idx_leads_pic_user ON leads(pic_user_id);
