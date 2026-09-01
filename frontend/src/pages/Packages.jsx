@@ -6,8 +6,15 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
 import { SkeletonCards } from '../components/Skeleton';
+import DeparturesTab from '../components/DeparturesTab';
+
+const TABS = [
+  { key: 'jadwal', label: 'Jadwal & Seat' },
+  { key: 'files', label: 'File Itinerary' },
+];
 
 export default function Packages() {
+  const [tab, setTab] = useState('jadwal');
   const { can } = usePermissions();
   const canManage = can('packages.manage');
   const push = useToastStore((s) => s.push);
@@ -114,9 +121,13 @@ export default function Packages() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div className="text-[28px] font-bold text-gray-dark">Paket & Itinerary</div>
-          <div className="text-sm text-secondary mt-1">Kelola file itinerary dan price list per paket</div>
+          <div className="text-sm text-secondary mt-1">
+            {tab === 'jadwal'
+              ? 'Tanggal keberangkatan dan status seat tiap paket'
+              : 'Kelola file itinerary dan price list per paket'}
+          </div>
         </div>
-        {canManage && (
+        {canManage && tab === 'files' && (
           <button
             onClick={openModal}
             className="h-10 px-5 text-white rounded-full btn-3d text-sm font-semibold flex items-center gap-2 cursor-pointer"
@@ -128,7 +139,24 @@ export default function Packages() {
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex gap-1 bg-surface rounded-xl p-1.5 w-fit border border-gray-med">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer ${tab === t.key ? 'btn-3d-sm btn-3d' : ''}`}
+            style={tab === t.key
+              ? { background: '#2563eb', color: '#fff' }
+              : { background: 'transparent', color: 'var(--color-secondary)' }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'jadwal' && <DeparturesTab canManage={canManage} />}
+
+      <div className={`flex-col gap-3 ${tab === 'files' ? 'flex' : 'hidden'}`}>
         {loading && <SkeletonCards count={3} />}
         {!loading && files.length === 0 && (
           <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">

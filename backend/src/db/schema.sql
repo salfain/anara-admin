@@ -70,6 +70,25 @@ CREATE TABLE IF NOT EXISTS packages (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Satu paket punya banyak keberangkatan, masing-masing dengan status seat
+-- sendiri. Kolom packages.dates yang berupa teks tidak bisa menampung itu:
+-- pesan follow-up jadi menyebut gabungan tanggal, bukan tanggal yang diminati.
+CREATE TABLE IF NOT EXISTS package_departures (
+  id SERIAL PRIMARY KEY,
+  package_id INT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+  depart_date DATE NOT NULL,
+  -- Sengaja tanpa CHECK: status seat diketik sendiri oleh tim di spreadsheet
+  -- ("AVAILABLE", "WAITING LIST", ...), dan daftar tertutup akan menolak data
+  -- mereka saat diimport. UI menawarkan pilihan umum, kolomnya tetap terbuka.
+  seat_status VARCHAR(40) NOT NULL DEFAULT 'AVAILABLE',
+  notes TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE (package_id, depart_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_departures_date ON package_departures(depart_date);
+
 CREATE TABLE IF NOT EXISTS quick_replies (
   id SERIAL PRIMARY KEY,
   question VARCHAR(500) NOT NULL,
