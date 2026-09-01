@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Download } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ConfirmDialog from './ConfirmDialog';
 import Skeleton from './Skeleton';
+import { eksporExcel, tanggalOnly } from '../utils/excelExport';
 
 const SEAT_UMUM = ['AVAILABLE', 'WAITING LIST', 'ON REQUEST', 'FULL', 'CLOSED'];
 
@@ -40,6 +41,7 @@ export default function DeparturesTab({ canManage }) {
     packageId: '', departDate: '', returnDate: '', seatStatus: 'AVAILABLE', capacity: 40,
   });
   const [adding, setAdding] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const fetchRows = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -102,6 +104,35 @@ export default function DeparturesTab({ canManage }) {
     }
   }
 
+  async function ekspor() {
+    setExporting(true);
+    try {
+      await eksporExcel({
+        // Yang diekspor adalah baris yang sedang terlihat, termasuk hasil
+        // pencarian dan filter. Kalau tidak, isi berkasnya tidak sama dengan
+        // yang barusan dilihat di layar.
+        namaFile: `jadwal-keberangkatan-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        namaSheet: 'Jadwal',
+        header: ['Paket', 'Destinasi', 'Berangkat', 'Pulang', 'Status Seat', 'Kapasitas', 'Terisi', 'Sisa'],
+        baris: terlihat.map((r) => [
+          r.packageName || '',
+          r.destination || '',
+          tanggalOnly(r.departDate),
+          tanggalOnly(r.returnDate),
+          r.seatStatus || '',
+          r.capacity ?? '',
+          r.booked ?? '',
+          r.seatsLeft ?? '',
+        ]),
+        lebar: [36, 16, 12, 12, 14, 10, 8, 8],
+      });
+    } catch {
+      push('Gagal membuat file Excel', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function hapus() {
     try {
       await api.delete(`/departures/${deleteTarget.id}`);
@@ -124,6 +155,14 @@ export default function DeparturesTab({ canManage }) {
           placeholder="Cari paket atau destinasi..."
           className={`${input} flex-1 min-w-[200px]`}
         />
+        <button
+          onClick={ekspor}
+          disabled={exporting || terlihat.length === 0}
+          className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-1.5 shrink-0"
+        >
+          <Download size={14} />
+          {exporting ? 'Menyiapkan...' : 'Export Excel'}
+        </button>
         <button
           onClick={() => setUpcomingOnly((v) => !v)}
           className="h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer border shrink-0"

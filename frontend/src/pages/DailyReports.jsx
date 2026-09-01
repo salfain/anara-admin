@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Check, Trash2 } from 'lucide-react';
+import { Copy, Check, Trash2, Download } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import usePermissions from '../hooks/usePermissions';
 import Skeleton from '../components/Skeleton';
 import { copyText } from '../utils/clipboard';
 import { susunLaporan } from '../utils/dailyReport';
+import { eksporExcel } from '../utils/excelExport';
 
 // New Leads tidak ada di sini: angkanya selalu jumlah kolom paket, jadi tidak
 // ada yang perlu mengetiknya.
@@ -53,6 +54,10 @@ export default function DailyReports() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  // Ekspor sebulan, bukan sehari: satu hari sudah terlihat di layar, yang
+  // dibutuhkan dalam berkas justru perbandingan antar hari.
+  const [bulanEkspor, setBulanEkspor] = useState(() => new Date().toISOString().slice(0, 7));
 
   const fetchDay = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -175,6 +180,35 @@ export default function DailyReports() {
     }
   }
 
+  async function ekspor() {
+    setExporting(true);
+    try {
+      const { data } = await api.get('/daily-reports', { params: { month: bulanEkspor } });
+      const kolom = packages;
+      await eksporExcel({
+        namaFile: `laporan-harian-${bulanEkspor}.xlsx`,
+        namaSheet: 'Laporan Harian',
+        header: ['Tanggal', 'CS', 'New Leads', ...kolom, 'Janji TF', 'Closing', 'Follow Up'],
+        baris: data.data.map((r) => [
+          String(r.reportDate).slice(0, 10),
+          r.picName || '',
+          r.newLeads ?? 0,
+          ...kolom.map((k) => r.breakdownCounts?.[k] ?? 0),
+          // Kosong tetap kosong, bukan nol. Nol berarti tidak ada yang janji
+          // transfer, sedangkan kosong berarti belum dihitung.
+          r.janjiTf ?? '',
+          r.totalClosing ?? 0,
+          r.totalFollowup ?? 0,
+        ]),
+        lebar: [12, 16, 11, ...kolom.map(() => 12), 10, 10, 11],
+      });
+    } catch {
+      push('Gagal membuat file Excel', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function salin(row) {
     const v = nilaiBaris(row);
     const teks = susunLaporan({
@@ -230,6 +264,21 @@ export default function DailyReports() {
             {total.newLeads} lead baru · {total.totalClosing} closing · {total.totalFollowup} follow up
           </div>
         )}
+        <input
+          type="month"
+          value={bulanEkspor}
+          onChange={(e) => setBulanEkspor(e.target.value)}
+          title="Bulan yang diekspor"
+          className={`${input} w-[150px]`}
+        />
+        <button
+          onClick={ekspor}
+          disabled={exporting}
+          className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-1.5 shrink-0"
+        >
+          <Download size={14} />
+          {exporting ? 'Menyiapkan...' : 'Export Excel'}
+        </button>
         {canManage && (
           <button
             onClick={() => setKelolaKolom((v) => !v)}

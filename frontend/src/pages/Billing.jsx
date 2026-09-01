@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Download } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Skeleton from '../components/Skeleton';
+import { eksporExcel } from '../utils/excelExport';
 
 // Kolom centang, sesuai pengelompokan di spreadsheet.
 const CENTANG = [
@@ -62,6 +63,7 @@ export default function Billing() {
   const [tunggakan, setTunggakan] = useState(null);
   const [form, setForm] = useState({ invoiceNo: '', customerName: '' });
   const [adding, setAdding] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.get('/departures')
@@ -166,6 +168,43 @@ export default function Billing() {
     }
   }
 
+  const ya = (v) => (v ? 'TRUE' : 'FALSE');
+
+  async function ekspor() {
+    setExporting(true);
+    try {
+      const dipilih = departures.find((d) => String(d.id) === departureId);
+      await eksporExcel({
+        namaFile: `penagihan-${dipilih ? dipilih.packageName.replace(/\s+/g, '-') : 'semua'}.xlsx`,
+        namaSheet: 'Penagihan',
+        header: [
+          'No', 'Nomor Invoice', 'Customer', 'Nama Peserta', 'Start', 'Finish',
+          'DP', 'Tiket', 'Pelunasan', 'Booking Berangkat', 'Booking Pulang',
+          'Tiket Brkt', 'Tiket Plg', 'Pesawat Brkt', 'Pesawat Plg', 'Kode Brkt', 'Kode Plg',
+        ],
+        // Nomor invoice dan customer diulang di tiap baris peserta, tidak
+        // dikosongkan seperti di spreadsheet. Berkas yang tiap barisnya utuh
+        // bisa disaring dan diurutkan; yang mengandalkan sel gabungan tidak.
+        baris: terlihat.flatMap((b) =>
+          b.participants.map((p, i) => [
+            i + 1, b.invoiceNo || '', b.customerName || '', p.name || '',
+            p.origin || '', p.destination || '',
+            ya(p.paidDp), ya(p.paidTicket), ya(p.paidSettlement),
+            ya(p.bookedOutbound), ya(p.bookedReturn),
+            p.ticketOutbound || '', p.ticketReturn || '',
+            p.airlineOutbound || '', p.airlineReturn || '',
+            p.codeOutbound || '', p.codeReturn || '',
+          ])
+        ),
+        lebar: [5, 22, 16, 26, 12, 12, 8, 8, 11, 17, 15, 12, 12, 14, 14, 12, 12],
+      });
+    } catch {
+      push('Gagal membuat file Excel', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function hapus() {
     try {
       if (deleteTarget.kind === 'booking') {
@@ -201,6 +240,16 @@ export default function Billing() {
             </option>
           ))}
         </select>
+        {!loading && bookings.length > 0 && (
+          <button
+            onClick={ekspor}
+            disabled={exporting}
+            className="h-9 px-4 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary text-[13px] font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-1.5 shrink-0"
+          >
+            <Download size={14} />
+            {exporting ? 'Menyiapkan...' : 'Export Excel'}
+          </button>
+        )}
         {!loading && bookings.length > 0 && (
           <div className="text-xs text-secondary">
             {ringkasan.invoice} invoice · {ringkasan.peserta} peserta · {ringkasan.lunas} lunas
