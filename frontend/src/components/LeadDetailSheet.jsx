@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { X, Pencil, Trash2, Send } from 'lucide-react';
+import api from '../api/client';
 
 function Row({ label, value }) {
   return (
@@ -10,6 +12,18 @@ function Row({ label, value }) {
 }
 
 export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDate, canManage, onClose, onEdit, onDelete, onSend }) {
+  const [history, setHistory] = useState([]);
+
+  // Di ponsel inilah lead dibuka sebelum ditelepon atau di-chat, jadi riwayatnya
+  // harus ada di sini juga — bukan hanya di dialog kirim.
+  useEffect(() => {
+    if (!open || !lead?.id) return;
+    setHistory([]);
+    api.get(`/leads/${lead.id}/notes`)
+      .then(({ data }) => setHistory(data.data))
+      .catch(() => {});
+  }, [open, lead?.id]);
+
   if (!open || !lead) return null;
 
   const followUps = [lead.followUp1, lead.followUp2, lead.followUp3];
@@ -60,6 +74,25 @@ export default function LeadDetailSheet({ open, lead, index, statusStyle, fmtDat
             <div className="text-xs text-secondary mb-1">Notes</div>
             <div className="text-sm text-gray-dark bg-gray-light rounded-lg p-3 whitespace-pre-wrap break-words">
               {lead.notes}
+            </div>
+          </div>
+        )}
+
+        {history.length > 0 && (
+          <div className="px-5 pt-4">
+            <div className="text-xs font-semibold text-gray-dark mb-2">Riwayat</div>
+            <div className="flex flex-col gap-1.5">
+              {history.slice(0, 6).map((h) => (
+                <div key={h.id} className="text-[11px] flex gap-2">
+                  <span className="text-secondary shrink-0 w-[62px]">
+                    {new Date(h.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                  </span>
+                  <span className={h.kind === 'status' ? 'text-secondary italic' : 'text-gray-dark'}>
+                    {h.body}
+                    {h.author && <span className="text-secondary"> · {h.author}</span>}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}

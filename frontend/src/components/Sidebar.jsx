@@ -7,6 +7,7 @@ import { navItems } from '../data/navItems';
 import InstallPwaButton from './InstallPwaButton';
 import AnaraLogo from './AnaraLogo';
 import { canSeeNavItem } from '../hooks/usePermissions';
+import useFollowUpStore from '../store/followUpStore';
 
 function Tooltip({ label, show }) {
   if (!show) return null;
@@ -21,6 +22,8 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const { collapsed, toggleCollapsed } = useSidebarStore();
+  const dueCount = useFollowUpStore((s) => s.due);
+  const overdueCount = useFollowUpStore((s) => s.overdue);
   const initials = (user?.name || '?')
     .split(' ')
     .map((p) => p[0])
@@ -63,6 +66,15 @@ export default function Sidebar() {
               >
                 <Icon size={18} />
                 {!collapsed && item.label}
+                {item.to === '/leads' && dueCount > 0 && (
+                  <span
+                    className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shrink-0 ${collapsed ? 'absolute top-1 right-1' : 'ml-auto'}`}
+                    style={{ background: overdueCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff' }}
+                    title={`${dueCount} lead perlu di-follow-up`}
+                  >
+                    {dueCount > 99 ? '99+' : dueCount}
+                  </span>
+                )}
               </NavLink>
               <Tooltip label={item.label} show={collapsed} />
             </div>

@@ -5,6 +5,7 @@ import useAuthStore from '../store/authStore';
 import { navItems, PRIMARY_COUNT } from '../data/navItems';
 import MobileMoreSheet from './MobileMoreSheet';
 import { canSeeNavItem } from '../hooks/usePermissions';
+import useFollowUpStore from '../store/followUpStore';
 
 export default function MobileBottomNav() {
   const { user } = useAuthStore();
@@ -12,6 +13,8 @@ export default function MobileBottomNav() {
   const location = useLocation();
 
   const visible = navItems.filter((item) => canSeeNavItem(user, item));
+  const dueCount = useFollowUpStore((s) => s.due);
+  const overdueCount = useFollowUpStore((s) => s.overdue);
   const primary = visible.slice(0, PRIMARY_COUNT);
   const overflow = visible.slice(PRIMARY_COUNT);
 
@@ -36,7 +39,17 @@ export default function MobileBottomNav() {
                       color: isActive ? '#ffffff' : 'var(--color-secondary)',
                     }}
                   >
-                    <Icon size={19} color={isActive ? '#ffffff' : 'var(--color-secondary)'} />
+                    <span className="relative flex">
+                      <Icon size={19} color={isActive ? '#ffffff' : 'var(--color-secondary)'} />
+                      {item.to === '/leads' && dueCount > 0 && (
+                        <span
+                          className="absolute -top-1 -right-2 text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center text-white"
+                          style={{ background: overdueCount > 0 ? '#ef4444' : '#f59e0b' }}
+                        >
+                          {dueCount > 9 ? '9+' : dueCount}
+                        </span>
+                      )}
+                    </span>
                     <span
                       className="text-[10px] leading-none truncate max-w-full"
                       style={{ fontWeight: isActive ? 700 : 500 }}

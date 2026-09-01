@@ -11,6 +11,7 @@ import Skeleton, { SkeletonRows } from '../components/Skeleton';
 import EditableCell from '../components/EditableCell';
 import { sortLeads } from '../utils/leadSort';
 import { toWaNumber } from '../utils/whatsapp';
+import useFollowUpStore from '../store/followUpStore';
 import {
   followUpState, daysSinceContact, withFollowUpToday, willShiftFollowUps,
   DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS,
@@ -116,6 +117,9 @@ export default function Leads() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const { can } = usePermissions();
   const canManage = can('leads.manage');
+  // Lencana di navigasi ikut disegarkan begitu ada yang mengubah antrean
+  // follow-up — menunggu tick berikutnya membuat angkanya terlihat salah.
+  const refreshBadge = useFollowUpStore((s) => s.refresh);
   const [deleting, setDeleting] = useState(false);
   const [detailTarget, setDetailTarget] = useState(null);
   const [picOptions, setPicOptions] = useState([]);
@@ -354,6 +358,8 @@ export default function Leads() {
     try {
       const { data } = await api.put(`/leads/${lead.id}`, toPayload(updated));
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? data.data : l)));
+      // Status dan tanggal FU sama-sama menentukan antrean.
+      if (field === 'status' || DATE_FIELDS.has(field)) refreshBadge();
     } catch (err) {
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
       push(err.response?.data?.error || 'Gagal menyimpan perubahan', 'error');
@@ -381,6 +387,7 @@ export default function Leads() {
 
     const { data } = await api.post('/leads', payload);
     setLeads((prev) => [data.data, ...prev]);
+    refreshBadge();
     if (bentrok) {
       push('Nomor ini sudah ada di daftar. Tetap ditambahkan — cek dulu supaya tidak di-follow-up dua kali.', 'error');
     }
@@ -393,6 +400,7 @@ export default function Leads() {
       const { data } = await api.put(`/leads/${lead.id}`, toPayload(withFollowUpToday(lead)));
       setLeads((prev) => prev.map((l) => (l.id === lead.id ? data.data : l)));
       setSendTarget(data.data);
+      refreshBadge();
       push(shifted ? 'Dicatat. FU paling lama digeser keluar.' : 'Follow-up hari ini dicatat.');
     } catch (err) {
       push(err.response?.data?.error || 'Gagal mencatat follow-up', 'error');
@@ -407,6 +415,7 @@ export default function Leads() {
       await api.delete(`/leads/${deleteTarget.id}`);
       push('Lead dihapus');
       setDeleteTarget(null);
+      refreshBadge();
       fetchLeads(false);
     } catch (err) {
       push(err.response?.data?.error || 'Gagal menghapus lead', 'error');
