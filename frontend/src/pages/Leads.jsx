@@ -10,6 +10,7 @@ import usePermissions from '../hooks/usePermissions';
 import Skeleton, { SkeletonRows } from '../components/Skeleton';
 import EditableCell from '../components/EditableCell';
 import { sortLeads } from '../utils/leadSort';
+import { toWaNumber } from '../utils/whatsapp';
 import {
   followUpState, daysSinceContact, withFollowUpToday, willShiftFollowUps,
   DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS,
@@ -200,6 +201,19 @@ export default function Leads() {
     );
   }
 
+  // Nomor yang sama bisa masuk dua kali — lewat import, atau dua CS yang
+  // mencatat chat yang sama. Tidak dilarang: customer lama yang pesan trip
+  // berikutnya memang lead baru. Tapi harus terlihat, supaya satu orang tidak
+  // dihubungi dua kali oleh dua CS.
+  const duplicateNumbers = useMemo(() => {
+    const hitung = new Map();
+    for (const l of leads) {
+      const n = toWaNumber(l.whatsapp);
+      if (n) hitung.set(n, (hitung.get(n) || 0) + 1);
+    }
+    return new Set([...hitung.entries()].filter(([, n]) => n > 1).map(([n]) => n));
+  }, [leads]);
+
   const fuCounts = useMemo(() => {
     let due = 0, overdue = 0;
     for (const l of leads) {
@@ -362,8 +376,14 @@ export default function Leads() {
       followUp3: row.followUp3 || null,
       country: row.country.trim() || null,
     };
+    const sudahAda = toWaNumber(payload.whatsapp);
+    const bentrok = sudahAda && leads.some((l) => toWaNumber(l.whatsapp) === sudahAda);
+
     const { data } = await api.post('/leads', payload);
     setLeads((prev) => [data.data, ...prev]);
+    if (bentrok) {
+      push('Nomor ini sudah ada di daftar. Tetap ditambahkan — cek dulu supaya tidak di-follow-up dua kali.', 'error');
+    }
   }
 
   async function handleMarkFollowedUp(lead) {
@@ -640,7 +660,23 @@ export default function Leads() {
                   </td>
                   {cell('entryDate', { type: 'date', className: 'text-gray-dark', display: fmtDate(l.entryDate) })}
                   {cell('name', { className: 'text-gray-dark', display: l.name || '-', placeholder: 'Nama customer' })}
-                  {cell('whatsapp', { className: 'text-gray-dark font-medium', display: l.whatsapp })}
+                  {cell('whatsapp', {
+                    className: 'text-gray-dark font-medium',
+                    display: (
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="truncate">{l.whatsapp}</span>
+                        {duplicateNumbers.has(toWaNumber(l.whatsapp)) && (
+                          <span
+                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                            style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn-soft-text)' }}
+                            title="Nomor ini muncul lebih dari sekali. Pastikan tidak di-follow-up dua kali."
+                          >
+                            2x
+                          </span>
+                        )}
+                      </span>
+                    ),
+                  })}
                   {cell('picSales', {
                     type: 'select', options: picSelectOptions(l.picSales),
                     className: 'text-secondary', display: l.picSales || '-',

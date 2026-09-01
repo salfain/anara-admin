@@ -6,6 +6,37 @@ const pool = require('./db/pool');
 
 const PORT = process.env.PORT || 4000;
 
+// Nilai contoh yang ikut ter-commit di .env.example. Kalau ini yang dipakai di
+// server sungguhan, siapa pun yang membaca repo bisa menandatangani token
+// admin palsu — password tidak perlu ditebak sama sekali.
+const CONTOH_SECRET = 'change_this_to_a_long_random_secret';
+
+/**
+ * Menolak jalan dengan kunci penandatanganan yang lemah.
+ *
+ * Kegagalan seperti ini tidak terlihat dari luar: aplikasinya jalan normal,
+ * semua fitur bekerja, dan tidak ada yang menandakan bahwa siapa pun bisa
+ * memalsukan sesi admin. Karena itu diperiksa saat start, bukan dibiarkan
+ * menunggu ada yang sadar.
+ */
+function checkJwtSecret() {
+  const secret = process.env.JWT_SECRET || '';
+  const masalah =
+    !secret ? 'JWT_SECRET belum diisi.'
+    : secret === CONTOH_SECRET ? 'JWT_SECRET masih memakai nilai contoh dari .env.example, yang ada di dalam repo.'
+    : secret.length < 32 ? `JWT_SECRET hanya ${secret.length} karakter — terlalu pendek untuk dipakai.`
+    : null;
+
+  if (!masalah) return;
+
+  console.error(`\n[FATAL] ${masalah}`);
+  console.error('Dengan kunci ini, token admin bisa dipalsukan tanpa perlu password.');
+  console.error('\nBuat kunci baru dengan perintah ini, lalu simpan di .env:');
+  console.error('  node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"');
+  console.error('\nSemua sesi yang sedang berjalan akan berakhir — semua orang perlu login ulang.\n');
+  process.exit(1);
+}
+
 // Template follow-up penuh emoji. Di database non-UTF8 karakter seperti itu
 // rusak diam-diam saat disimpan, dan baru ketahuan setelah pesannya terkirim
 // ke customer. Lebih baik berisik sekarang.
@@ -45,6 +76,8 @@ async function migrate() {
   await pool.query(schema);
   console.log('Skema database sudah sesuai.');
 }
+
+checkJwtSecret();
 
 migrate()
   .then(async () => {
