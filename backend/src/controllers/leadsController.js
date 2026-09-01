@@ -10,6 +10,9 @@ const OVERDUE_AFTER_DAYS = 7;
 // Lead yang sudah DP atau batal tidak perlu dikejar lagi.
 const CLOSED_STATUSES = ['Sudah DP', 'Batal'];
 
+// Satu-satunya status yang berarti berhasil.
+const WON_STATUS = 'Sudah DP';
+
 function serialize(row) {
   return {
     id: row.id,
@@ -30,6 +33,7 @@ function serialize(row) {
     packagePrice: row.package_price !== undefined && row.package_price !== null
       ? Number(row.package_price)
       : null,
+    wonAt: row.won_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -114,12 +118,19 @@ async function update(req, res, next) {
 
     const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
 
+    // Dicatat sekali saat pertama kali jadi "Sudah DP", dan dikosongkan lagi
+    // kalau statusnya dicabut. Menulis ulang tiap update akan menggeser tanggal
+    // closing setiap kali ada yang menyunting catatan.
+    const wasWon = existing.rows[0].status === WON_STATUS;
+    const isWon = (status || 'Baru') === WON_STATUS;
+    const wonAt = isWon ? (wasWon ? existing.rows[0].won_at : new Date()) : null;
+
     const result = await pool.query(
       `UPDATE leads
        SET entry_date = $1, whatsapp = $2, pic_sales = $3, status = $4, notes = $5,
            follow_up_1 = $6, follow_up_2 = $7, follow_up_3 = $8, country = $9,
-           name = $10, package_id = $11, updated_at = NOW()
-       WHERE id = $12
+           name = $10, package_id = $11, won_at = $12, updated_at = NOW()
+       WHERE id = $13
        RETURNING *`,
       [
         entryDate,
@@ -133,6 +144,7 @@ async function update(req, res, next) {
         country || null,
         name || null,
         packageId || null,
+        wonAt,
         req.params.id,
       ]
     );

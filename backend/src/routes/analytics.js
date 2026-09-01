@@ -9,5 +9,6 @@ router.get('/top-questions', authenticate, requirePermission('analytics.view'), 
 router.get('/categories', authenticate, requirePermission('analytics.view'), controller.categories);
 router.get('/usage', authenticate, requirePermission('analytics.view'), controller.usageTrend);
 router.get('/team-stats', authenticate, requirePermission('analytics.view'), controller.teamStats);
+router.get('/sales', authenticate, requirePermission('analytics.view'), controller.sales);
 
 module.exports = router;

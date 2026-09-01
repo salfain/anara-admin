@@ -159,6 +159,11 @@ CREATE TABLE IF NOT EXISTS leads (
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS package_id INT REFERENCES packages(id) ON DELETE SET NULL;
 
+-- Kapan lead berubah jadi "Sudah DP". Tanpa ini, lama waktu sampai closing
+-- hanya bisa ditebak dari updated_at, yang ikut berubah setiap kali baris
+-- disunting — angkanya akan terlihat meyakinkan padahal salah.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_at TIMESTAMP;
+
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
 CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);

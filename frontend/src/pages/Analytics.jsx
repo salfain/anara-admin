@@ -22,7 +22,13 @@ function getRange(preset) {
   return { start_date: start.toISOString(), end_date: end.toISOString() };
 }
 
+const TABS = [
+  { key: 'replies', label: 'Quick Replies' },
+  { key: 'sales', label: 'Penjualan' },
+];
+
 export default function Analytics() {
+  const [tab, setTab] = useState('sales');
   const theme = useThemeStore((s) => s.theme);
   const tickColor = theme === 'dark' ? '#f1f5f9' : '#111827';
   const [preset, setPreset] = useState('month');
@@ -57,9 +63,11 @@ export default function Analytics() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <div className="text-[28px] font-bold text-gray-dark">Analytics</div>
-          <div className="text-sm text-secondary mt-1">Insight penggunaan quick replies tim</div>
+          <div className="text-sm text-secondary mt-1">
+            {tab === 'sales' ? 'Dari mana lead datang, dan berapa yang jadi' : 'Insight penggunaan quick replies tim'}
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${tab === 'sales' ? 'hidden' : ''}`}>
           {RANGE_PRESETS.map((p) => (
             <button
               key={p.key}
@@ -73,11 +81,29 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex gap-1 bg-surface rounded-xl p-1.5 w-fit border border-gray-med">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`h-9 px-4 rounded-full text-[13px] font-semibold cursor-pointer ${tab === t.key ? 'btn-3d-sm btn-3d' : ''}`}
+            style={tab === t.key
+              ? { background: '#2563eb', color: '#fff' }
+              : { background: 'transparent', color: 'var(--color-secondary)' }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'sales' && <SalesTab tickColor={tickColor} />}
+
+      {tab === 'replies' && (
+      <>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricCard label="Total Replies" value={summary.totalReplies} loading={loading} />
         <MetricCard label="Total Usage" value={`${summary.totalUsage}x`} loading={loading} />
         <MetricCard label="Active Users" value={summary.activeUsers} loading={loading} />
-        <MetricCard label="System Uptime" value="99.8%" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
@@ -167,6 +193,8 @@ export default function Analytics() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -180,6 +208,151 @@ function MetricCard({ label, value, loading }) {
       ) : (
         <div className="text-[32px] font-bold text-gray-dark">{value}</div>
       )}
+    </div>
+  );
+}
+
+/** Ringkasan penjualan: sumber lead, hasilnya, dan siapa yang mengerjakan. */
+function SalesTab({ tickColor }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSales = useCallback((showLoading = true) => {
+    if (showLoading) setLoading(true);
+    return api.get('/analytics/sales')
+      .then(({ data: res }) => setData(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchSales(true); }, [fetchSales]);
+  useAutoRefresh(() => fetchSales(false), 30000);
+
+  const total = (data?.funnel || []).reduce((sum, f) => sum + f.count, 0);
+  const won = (data?.funnel || []).find((f) => f.label === 'Sudah DP')?.count || 0;
+  const lost = (data?.funnel || []).find((f) => f.label === 'Batal')?.count || 0;
+  const selesai = won + lost;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard label="Total Lead" value={total} loading={loading} />
+        <MetricCard label="Closing" value={won} loading={loading} />
+        <MetricCard
+          label="Konversi"
+          value={selesai > 0 ? `${Math.round((won / selesai) * 100)}%` : '—'}
+          loading={loading}
+        />
+        <MetricCard
+          label="Rata-rata sampai closing"
+          value={data?.timeToWin?.avgDays != null ? `${data.timeToWin.avgDays} hari` : '—'}
+          loading={loading}
+        />
+      </div>
+
+      {!loading && selesai > 0 && (
+        <div className="text-xs text-secondary -mt-3">
+          Konversi dihitung dari {selesai} lead yang sudah selesai ({won} closing, {lost} batal).
+          Lead yang masih berjalan tidak ikut, supaya angkanya tidak terlihat buruk hanya karena antrean panjang.
+          {data?.timeToWin?.sample === 0 && ' Lama sampai closing baru mulai tercatat sejak fitur ini aktif.'}
+          {data?.timeToWin?.sample > 0 && data.timeToWin.sample < 5 &&
+            ` Rata-rata waktu masih dari ${data.timeToWin.sample} lead saja — belum bisa dijadikan patokan.`}
+        </div>
+      )}
+
+      <SalesTable
+        title="Per Paket"
+        hint="Paket yang ramai ditanya tapi sedikit closing layak ditinjau ulang — harga, itinerary, atau cara menjelaskannya."
+        rows={data?.byPackage}
+        loading={loading}
+        headLabel="Paket"
+      />
+
+      <SalesTable
+        title="Per PIC Sales"
+        hint="Bandingkan konversi, bukan jumlah lead — yang pegang lead terbanyak belum tentu yang paling banyak closing."
+        rows={data?.byPic}
+        loading={loading}
+        headLabel="PIC"
+      />
+
+      <div className="bg-surface rounded-xl p-6 flex flex-col gap-4 border border-gray-med">
+        <div className="text-base font-semibold text-gray-dark">Sebaran Status</div>
+        {loading ? (
+          <Skeleton className="w-full" style={{ height: 200 }} />
+        ) : total === 0 ? (
+          <div className="text-sm text-secondary">Belum ada lead.</div>
+        ) : (
+          <div style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.funnel} margin={{ left: -16, right: 8 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: tickColor }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: tickColor }} axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Bar dataKey="count" name="Lead" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SalesTable({ title, hint, rows, loading, headLabel }) {
+  return (
+    <div className="bg-surface rounded-xl border border-gray-med overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-med">
+        <div className="text-base font-semibold text-gray-dark">{title}</div>
+        <div className="text-xs text-secondary mt-1 max-w-[620px]">{hint}</div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] border-collapse">
+          <thead>
+            <tr className="bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
+              <th className="text-left px-6 py-3">{headLabel}</th>
+              <th className="text-right px-4 py-3">Lead</th>
+              <th className="text-right px-4 py-3">Closing</th>
+              <th className="text-right px-4 py-3">Batal</th>
+              <th className="text-right px-4 py-3">Berjalan</th>
+              <th className="text-right px-6 py-3">Konversi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={6} className="px-6 py-4"><Skeleton className="h-3.5" /></td></tr>
+            )}
+            {!loading && (rows || []).length === 0 && (
+              <tr><td colSpan={6} className="text-center text-sm text-secondary py-10">Belum ada data.</td></tr>
+            )}
+            {!loading && (rows || []).map((r) => (
+              <tr key={r.label} className="border-t border-gray-med">
+                <td className="px-6 py-3 text-sm text-gray-dark">{r.label}</td>
+                <td className="px-4 py-3 text-sm text-gray-dark text-right">{r.leads}</td>
+                <td className="px-4 py-3 text-sm text-right font-semibold" style={{ color: '#16a34a' }}>{r.won}</td>
+                <td className="px-4 py-3 text-sm text-secondary text-right">{r.lost}</td>
+                <td className="px-4 py-3 text-sm text-secondary text-right">{r.open}</td>
+                <td className="px-6 py-3 text-right">
+                  {r.conversion === null ? (
+                    // Belum ada satu pun lead yang selesai, jadi persentase apa
+                    // pun akan menyesatkan.
+                    <span className="text-xs text-secondary" title="Belum ada lead yang selesai">—</span>
+                  ) : (
+                    <span
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={r.conversion >= 50
+                        ? { background: 'var(--color-success-soft)', color: 'var(--color-success-soft-text)' }
+                        : { background: 'var(--color-neutral-soft)', color: 'var(--color-neutral-soft-text)' }}
+                    >
+                      {r.conversion}%
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

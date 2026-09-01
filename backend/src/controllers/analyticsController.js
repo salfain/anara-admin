@@ -145,4 +145,66 @@ async function teamStats(req, res, next) {
   }
 }
 
-module.exports = { summary, topQuestions, categories, usageTrend, teamStats };
+/**
+ * Angka penjualan: dari mana lead datang, dan berapa yang jadi.
+ *
+ * "Closing" berarti status Sudah DP. Lead berstatus Batal dihitung sebagai
+ * kalah, sisanya masih berjalan — dipisah supaya tingkat konversi tidak
+ * terlihat buruk hanya karena banyak lead yang masih diproses.
+ */
+async function sales(req, res, next) {
+  try {
+    const won = `COUNT(*) FILTER (WHERE l.status = 'Sudah DP')`;
+    const lost = `COUNT(*) FILTER (WHERE l.status = 'Batal')`;
+
+    const [byPackage, byPic, funnel, speed] = await Promise.all([
+      pool.query(
+        `SELECT COALESCE(p.name, 'Tanpa paket') AS label,
+                COUNT(*)::int AS leads, ${won}::int AS won, ${lost}::int AS lost
+         FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+         GROUP BY 1 ORDER BY leads DESC LIMIT 10`
+      ),
+      pool.query(
+        `SELECT COALESCE(l.pic_sales, 'Tanpa PIC') AS label,
+                COUNT(*)::int AS leads, ${won}::int AS won, ${lost}::int AS lost
+         FROM leads l GROUP BY 1 ORDER BY leads DESC LIMIT 10`
+      ),
+      pool.query(`SELECT status AS label, COUNT(*)::int AS count FROM leads GROUP BY 1`),
+      // won_at baru ada sejak fitur ini, jadi lead lama tidak punya tanggalnya.
+      // Yang dihitung hanya yang punya, dan jumlahnya ikut dikirim supaya
+      // angkanya bisa dinilai — rata-rata dari dua lead bukan kesimpulan.
+      pool.query(
+        `SELECT COUNT(*)::int AS sample,
+                ROUND(AVG(won_at::date - entry_date))::int AS avg_days
+         FROM leads WHERE won_at IS NOT NULL`
+      ),
+    ]);
+
+    const withRate = (rows) =>
+      rows.map((r) => ({
+        label: r.label,
+        leads: r.leads,
+        won: r.won,
+        lost: r.lost,
+        open: r.leads - r.won - r.lost,
+        // Persentase dihitung dari lead yang sudah selesai saja.
+        conversion: r.won + r.lost > 0 ? Math.round((r.won / (r.won + r.lost)) * 100) : null,
+      }));
+
+    res.json({
+      data: {
+        byPackage: withRate(byPackage.rows),
+        byPic: withRate(byPic.rows),
+        funnel: funnel.rows,
+        timeToWin: {
+          sample: speed.rows[0].sample,
+          avgDays: speed.rows[0].avg_days,
+        },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { summary, topQuestions, categories, usageTrend, teamStats, sales };

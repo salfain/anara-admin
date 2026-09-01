@@ -197,3 +197,83 @@ test('import matches packages by name and keeps leads whose package is unknown',
   assert.equal(byNumber['628002'].packageId, null);
   assert.equal(byNumber['628002'].name, 'Budi');
 });
+
+test('sales analytics counts conversion per package and per PIC', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query('DELETE FROM packages');
+  const korea = (await pool.query(`INSERT INTO packages (name) VALUES ('Korea') RETURNING id`)).rows[0].id;
+  const jepang = (await pool.query(`INSERT INTO packages (name) VALUES ('Jepang') RETURNING id`)).rows[0].id;
+
+  // Korea: banyak ditanya, sedikit jadi. Jepang: sebaliknya. Justru pola ini
+  // yang harus terlihat, dan tidak terlihat kalau hanya menghitung lead.
+  const rows = [
+    [korea, 'Dita', 'Sudah DP'],
+    [korea, 'Dita', 'Batal'],
+    [korea, 'Dita', 'Batal'],
+    [korea, 'Budi', 'Nego'],
+    [jepang, 'Budi', 'Sudah DP'],
+    [jepang, 'Budi', 'Sudah DP'],
+    [jepang, 'Budi', 'Batal'],
+  ];
+  for (const [pkg, pic, status] of rows) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, package_id, pic_sales, status)
+       VALUES ('2026-08-01', '628', $1, $2, $3)`,
+      [pkg, pic, status]
+    );
+  }
+
+  const { data } = await (await fetch(`${base}/analytics/sales`, { headers })).json();
+
+  const byPkg = Object.fromEntries(data.byPackage.map((r) => [r.label, r]));
+  assert.equal(byPkg.Korea.leads, 4);
+  assert.equal(byPkg.Korea.won, 1);
+  assert.equal(byPkg.Korea.open, 1, 'lead yang masih Nego belum selesai');
+  // 1 dari 3 yang selesai — lead yang masih berjalan tidak ikut membagi.
+  assert.equal(byPkg.Korea.conversion, 33);
+  assert.equal(byPkg.Jepang.conversion, 67);
+
+  const byPic = Object.fromEntries(data.byPic.map((r) => [r.label, r]));
+  assert.equal(byPic.Dita.conversion, 33);
+  assert.equal(byPic.Budi.conversion, 67);
+});
+
+test('conversion is blank, not zero, when nothing has finished yet', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query(
+    `INSERT INTO leads (entry_date, whatsapp, pic_sales, status) VALUES ('2026-08-01', '628', 'Sari', 'Nego')`
+  );
+  const { data } = await (await fetch(`${base}/analytics/sales`, { headers })).json();
+  // 0% akan terbaca sebagai "gagal semua", padahal belum ada yang selesai.
+  assert.equal(data.byPic[0].conversion, null);
+});
+
+test('the closing date is stamped once and not moved by later edits', async () => {
+  await pool.query('DELETE FROM leads');
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628999', status: 'Nego' }),
+  })).json()).data;
+  assert.equal(lead.wonAt, null);
+
+  const won = (await (await fetch(`${base}/leads/${lead.id}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ ...toPayload(lead), status: 'Sudah DP' }),
+  })).json()).data;
+  assert.ok(won.wonAt, 'tanggal closing tercatat saat status berubah');
+
+  const edited = (await (await fetch(`${base}/leads/${lead.id}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ ...toPayload(won), notes: 'catatan menyusul' }),
+  })).json()).data;
+  assert.equal(
+    new Date(edited.wonAt).getTime(), new Date(won.wonAt).getTime(),
+    'menyunting catatan tidak boleh menggeser tanggal closing'
+  );
+
+  const reopened = (await (await fetch(`${base}/leads/${lead.id}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ ...toPayload(won), status: 'Nego' }),
+  })).json()).data;
+  assert.equal(reopened.wonAt, null, 'status dicabut, tanggalnya ikut dicabut');
+});
