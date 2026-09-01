@@ -247,6 +247,29 @@ CREATE TABLE IF NOT EXISTS daily_reports (
   UNIQUE (report_date, user_id)
 );
 
+-- Rincian per paket disimpan sebagai angka, bukan teks.
+-- Sebelumnya admin harus mengetik "3 negara = 2, Korea = 1" setiap hari.
+ALTER TABLE daily_reports ADD COLUMN IF NOT EXISTS breakdown_counts JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Pindahkan teks yang terlanjur tersimpan, lalu kolom lamanya dibuang supaya
+-- tidak ada dua sumber untuk hal yang sama.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'daily_reports' AND column_name = 'breakdown') THEN
+    UPDATE daily_reports SET breakdown_counts = COALESCE((
+      SELECT jsonb_object_agg(btrim(split_part(baris, '=', 1)),
+                              NULLIF(btrim(split_part(baris, '=', 2)), '')::int)
+      FROM unnest(string_to_array(breakdown, E'
+')) AS baris
+      WHERE btrim(baris) <> '' AND position('=' in baris) > 0
+    ), '{}'::jsonb)
+    WHERE breakdown IS NOT NULL AND breakdown_counts = '{}'::jsonb;
+
+    ALTER TABLE daily_reports DROP COLUMN breakdown;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(report_date DESC);
 
 -- Penagihan: tahap setelah lead closing, sampai peserta berangkat.

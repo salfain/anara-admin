@@ -11,7 +11,8 @@ function serialize(row) {
     janjiTf: row.janji_tf,
     totalClosing: row.total_closing,
     totalFollowup: row.total_followup,
-    breakdown: row.breakdown,
+    // { "Korea": 2, "3 negara": 1 } - angka per paket, bukan teks yang diketik.
+    breakdownCounts: row.breakdown_counts || {},
     notes: row.notes,
   };
 }
@@ -55,6 +56,18 @@ function angka(v, bawaan = 0) {
   return Number.isFinite(n) ? n : bawaan;
 }
 
+/** Hanya menerima objek berisi angka positif, dan membuang nilai nol. */
+function bersihkanRincian(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  const keluar = {};
+  for (const [label, nilai] of Object.entries(input)) {
+    const n = Number(nilai);
+    // Paket yang nol tidak perlu disimpan; ketiadaannya sudah berarti nol.
+    if (Number.isFinite(n) && n > 0) keluar[String(label).trim()] = Math.trunc(n);
+  }
+  return keluar;
+}
+
 /**
  * Membuat atau memperbarui laporan satu orang untuk satu tanggal.
  *
@@ -67,30 +80,34 @@ async function save(req, res, next) {
     if (!reportDate) return res.status(400).json({ error: 'Tanggal laporan wajib diisi' });
     if (!userId) return res.status(400).json({ error: 'CS wajib dipilih' });
 
+    const rincian = bersihkanRincian(req.body.breakdownCounts);
+
     const result = await pool.query(
       `INSERT INTO daily_reports
-         (report_date, user_id, new_leads, janji_tf, total_closing, total_followup, breakdown, notes, created_by)
+         (report_date, user_id, new_leads, janji_tf, total_closing, total_followup, breakdown_counts, notes, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (report_date, user_id) DO UPDATE SET
          new_leads = EXCLUDED.new_leads,
          janji_tf = EXCLUDED.janji_tf,
          total_closing = EXCLUDED.total_closing,
          total_followup = EXCLUDED.total_followup,
-         breakdown = EXCLUDED.breakdown,
+         breakdown_counts = EXCLUDED.breakdown_counts,
          notes = EXCLUDED.notes,
          updated_at = NOW()
        RETURNING *`,
       [
         reportDate,
         userId,
-        angka(req.body.newLeads),
+        // New Leads selalu jumlah rinciannya, supaya keduanya tidak mungkin
+        // berbeda. Yang diisi admin cuma angka per paket.
+        Object.values(rincian).reduce((a, b) => a + b, 0),
         // Sengaja boleh null: kosong berarti belum dihitung, bukan nol.
         req.body.janjiTf === '' || req.body.janjiTf === null || req.body.janjiTf === undefined
           ? null
           : angka(req.body.janjiTf),
         angka(req.body.totalClosing),
         angka(req.body.totalFollowup),
-        req.body.breakdown || null,
+        JSON.stringify(rincian),
         req.body.notes || null,
         req.user.id,
       ]
@@ -133,7 +150,7 @@ async function day(req, res, next) {
   try {
     const tanggal = req.query.date || new Date().toISOString().slice(0, 10);
 
-    const [users, tersimpan, baru, closing, difollowup, perPaket] = await Promise.all([
+    const [users, tersimpan, baru, closing, difollowup, perPaket, paketAktif] = await Promise.all([
       pool.query(`SELECT id, name FROM users WHERE status = 'active' ORDER BY name ASC`),
       pool.query(`SELECT * FROM daily_reports WHERE report_date = $1::date`, [tanggal]),
       pool.query(
@@ -160,6 +177,15 @@ async function day(req, res, next) {
          GROUP BY 1, 2 ORDER BY n DESC`,
         [tanggal]
       ),
+      // Paket yang jadi kolom: yang masih punya keberangkatan ke depan.
+      // Daftarnya ikut berubah sendiri saat trip lama selesai dan yang baru
+      // dibuka, tanpa ada yang perlu menyunting daftar kolom.
+      pool.query(
+        `SELECT DISTINCT p.name FROM packages p
+         JOIN package_departures d ON d.package_id = p.id
+         WHERE d.depart_date >= CURRENT_DATE
+         ORDER BY p.name ASC`
+      ),
     ]);
 
     const angkaPer = (rows) => new Map(rows.map((r) => [r.uid, r.n]));
@@ -170,8 +196,8 @@ async function day(req, res, next) {
 
     const rincianPer = new Map();
     for (const r of perPaket.rows) {
-      if (!rincianPer.has(r.uid)) rincianPer.set(r.uid, []);
-      rincianPer.get(r.uid).push(`${r.label} = ${r.n}`);
+      if (!rincianPer.has(r.uid)) rincianPer.set(r.uid, {});
+      rincianPer.get(r.uid)[r.label] = r.n;
     }
 
     const data = users.rows.map((u) => {
@@ -180,7 +206,7 @@ async function day(req, res, next) {
         newLeads: nBaru.get(u.id) || 0,
         totalClosing: nClosing.get(u.id) || 0,
         totalFollowup: nFollowup.get(u.id) || 0,
-        breakdown: (rincianPer.get(u.id) || []).join('\n'),
+        breakdownCounts: rincianPer.get(u.id) || {},
       };
       return {
         userId: u.id,
@@ -190,7 +216,16 @@ async function day(req, res, next) {
       };
     });
 
-    res.json({ data: { date: tanggal, rows: data } });
+    // Paket yang muncul di data hari itu atau di laporan tersimpan ikut jadi
+    // kolom walau keberangkatannya sudah lewat, supaya angka yang sudah
+    // tercatat tidak hilang dari tampilan.
+    const kolom = new Set(paketAktif.rows.map((p) => p.name));
+    for (const row of data) {
+      Object.keys(row.computed.breakdownCounts).forEach((k) => kolom.add(k));
+      if (row.saved) Object.keys(row.saved.breakdownCounts).forEach((k) => kolom.add(k));
+    }
+
+    res.json({ data: { date: tanggal, packages: [...kolom].sort(), rows: data } });
   } catch (err) {
     next(err);
   }

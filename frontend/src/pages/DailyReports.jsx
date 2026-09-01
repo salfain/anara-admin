@@ -7,12 +7,17 @@ import Skeleton from '../components/Skeleton';
 import { copyText } from '../utils/clipboard';
 import { susunLaporan } from '../utils/dailyReport';
 
+// New Leads tidak ada di sini: angkanya selalu jumlah kolom paket, jadi tidak
+// ada yang perlu mengetiknya.
 const KOLOM = [
-  { field: 'newLeads', label: 'New Leads' },
   { field: 'janjiTf', label: 'Janji TF' },
   { field: 'totalClosing', label: 'Closing' },
   { field: 'totalFollowup', label: 'Follow Up' },
 ];
+
+function jumlahRincian(rincian) {
+  return Object.values(rincian || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+}
 
 function hariIni() {
   return new Date().toISOString().slice(0, 10);
@@ -41,6 +46,7 @@ export default function DailyReports() {
 
   const [tanggal, setTanggal] = useState(hariIni);
   const [rows, setRows] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -50,6 +56,7 @@ export default function DailyReports() {
     try {
       const { data } = await api.get('/daily-reports/day', { params: { date: tanggal } });
       setRows(data.data.rows);
+      setPackages(data.data.packages);
     } catch {
       push('Gagal memuat laporan harian', 'error');
     } finally {
@@ -65,7 +72,7 @@ export default function DailyReports() {
         (a, r) => {
           const v = nilaiBaris(r);
           return {
-            newLeads: a.newLeads + (v.newLeads || 0),
+            newLeads: a.newLeads + jumlahRincian(v.breakdownCounts),
             totalClosing: a.totalClosing + (v.totalClosing || 0),
             totalFollowup: a.totalFollowup + (v.totalFollowup || 0),
             tersimpan: a.tersimpan + (r.saved ? 1 : 0),
@@ -83,11 +90,10 @@ export default function DailyReports() {
       const { data } = await api.post('/daily-reports', {
         reportDate: tanggal,
         userId: row.userId,
-        newLeads: nilai.newLeads,
         janjiTf: nilai.janjiTf,
         totalClosing: nilai.totalClosing,
         totalFollowup: nilai.totalFollowup,
-        breakdown: nilai.breakdown,
+        breakdownCounts: nilai.breakdownCounts,
         ...perubahan,
       });
       setRows((prev) => prev.map((r) => (r.userId === row.userId ? { ...r, saved: data.data } : r)));
@@ -141,14 +147,8 @@ export default function DailyReports() {
       data: {
         date: tanggal,
         picName: row.picName,
-        newLeads: v.newLeads,
-        byPackage: (v.breakdown || '')
-          .split('\n')
-          .filter(Boolean)
-          .map((baris) => {
-            const [label, count] = baris.split('=');
-            return { label: (label || '').trim(), count: (count || '').trim() };
-          }),
+        newLeads: jumlahRincian(v.breakdownCounts),
+        byPackage: Object.entries(v.breakdownCounts || {}).map(([label, count]) => ({ label, count })),
         closing: v.totalClosing,
         followedUp: v.totalFollowup,
       },
@@ -222,11 +222,15 @@ export default function DailyReports() {
             <table className="w-full min-w-[860px] text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
-                  <th className="text-left px-4 py-3 w-[160px]">CS</th>
-                  {KOLOM.map((k) => (
-                    <th key={k.field} className="text-left px-3 py-3 w-[100px]">{k.label}</th>
+                  <th className="text-left px-4 py-3 w-[150px]">CS</th>
+                  <th className="text-left px-3 py-3 w-[90px]">New Leads</th>
+                  {/* Satu kolom per paket, isinya angka saja. */}
+                  {packages.map((nama) => (
+                    <th key={nama} className="text-left px-2 py-3 w-[80px] normal-case">{nama}</th>
                   ))}
-                  <th className="text-left px-4 py-3">Rincian</th>
+                  {KOLOM.map((k) => (
+                    <th key={k.field} className="text-left px-3 py-3 w-[90px]">{k.label}</th>
+                  ))}
                   <th className="px-3 py-3 w-[90px]" />
                 </tr>
               </thead>
@@ -241,6 +245,30 @@ export default function DailyReports() {
                             angkanya masih usulan. */}
                         {!r.saved && <div className="text-[10px] text-secondary">belum disimpan</div>}
                       </td>
+                      {/* Dihitung dari kolom paket, jadi tidak bisa diketik dan
+                          tidak mungkin berbeda dengan rinciannya. */}
+                      <td className="px-3 py-2 text-gray-dark font-semibold">
+                        {jumlahRincian(v.breakdownCounts)}
+                      </td>
+                      {packages.map((nama) => (
+                        <td key={nama} className="px-1 py-1">
+                          <input
+                            type="number"
+                            min={0}
+                            key={`${r.userId}-${nama}-${r.saved ? 'saved' : 'draft'}`}
+                            defaultValue={v.breakdownCounts?.[nama] ?? ''}
+                            disabled={!canManage}
+                            placeholder="0"
+                            onBlur={(e) => {
+                              const nilai = e.target.value === '' ? 0 : Number(e.target.value);
+                              const sekarang = v.breakdownCounts?.[nama] ?? 0;
+                              if (nilai === sekarang) return;
+                              simpan(r, { breakdownCounts: { ...v.breakdownCounts, [nama]: nilai } });
+                            }}
+                            className="w-full h-8 px-1.5 text-sm bg-transparent text-gray-dark border border-transparent rounded hover:border-gray-med focus:border-primary focus:outline-none"
+                          />
+                        </td>
+                      ))}
                       {KOLOM.map((k) => (
                         <td key={k.field} className="px-2 py-1">
                           <input
@@ -258,19 +286,6 @@ export default function DailyReports() {
                           />
                         </td>
                       ))}
-                      <td className="px-2 py-1">
-                        <input
-                          key={`${r.userId}-rincian-${r.saved ? 'saved' : 'draft'}`}
-                          defaultValue={(v.breakdown || '').replace(/\n/g, ', ')}
-                          disabled={!canManage}
-                          placeholder="3 negara = 2, Korea = 1"
-                          onBlur={(e) => {
-                            const nilai = e.target.value.split(',').map((x) => x.trim()).filter(Boolean).join('\n');
-                            if (nilai !== (v.breakdown || '')) simpan(r, { breakdown: nilai });
-                          }}
-                          className="w-full h-8 px-2 text-sm bg-transparent text-gray-dark border border-transparent rounded hover:border-gray-med focus:border-primary focus:outline-none"
-                        />
-                      </td>
                       <td className="px-3 py-2">
                         <div className="flex justify-end gap-1">
                           <button
@@ -318,7 +333,35 @@ export default function DailyReports() {
                       {copiedId === r.userId ? <Check size={12} /> : <Copy size={12} />}
                     </button>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
+                  {packages.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-secondary mb-1">
+                        Lead baru per paket ({jumlahRincian(v.breakdownCounts)} total)
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {packages.map((nama) => (
+                          <label key={nama} className="flex flex-col gap-1">
+                            <span className="text-[10px] text-secondary truncate" title={nama}>{nama}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              key={`${r.userId}-${nama}-${r.saved ? 'saved' : 'draft'}`}
+                              defaultValue={v.breakdownCounts?.[nama] ?? ''}
+                              disabled={!canManage}
+                              placeholder="0"
+                              onBlur={(e) => {
+                                const nilai = e.target.value === '' ? 0 : Number(e.target.value);
+                                if (nilai === (v.breakdownCounts?.[nama] ?? 0)) return;
+                                simpan(r, { breakdownCounts: { ...v.breakdownCounts, [nama]: nilai } });
+                              }}
+                              className="w-full h-8 px-2 text-sm bg-surface text-gray-dark border border-gray-med rounded-lg focus:outline-none focus:border-primary"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
                     {KOLOM.map((k) => (
                       <label key={k.field} className="flex flex-col gap-1">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary">{k.label}</span>

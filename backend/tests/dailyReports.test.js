@@ -52,23 +52,23 @@ test('a report is saved and read back with the CS name', async () => {
   const { data } = await (await call('POST', '/daily-reports', {
     reportDate: '2026-08-28',
     userId: 2,
-    newLeads: 3,
     janjiTf: 2,
     totalClosing: 1,
     totalFollowup: 22,
-    breakdown: '3 negara = 2\nKorea = 1',
+    breakdownCounts: { '3 negara': 2, Korea: 1 },
   })).json();
 
   assert.equal(data.picName, 'Alvin');
-  assert.equal(data.newLeads, 3);
   assert.equal(data.totalFollowup, 22);
-  assert.equal(data.breakdown, '3 negara = 2\nKorea = 1');
+  assert.deepEqual(data.breakdownCounts, { '3 negara': 2, Korea: 1 });
+  // New Leads selalu jumlah rinciannya, bukan angka yang dikirim terpisah.
+  assert.equal(data.newLeads, 3);
 });
 
 test('saving the same day again corrects it instead of adding a second row', async () => {
   // Admin akan membuka laporan kemarin dan membetulkan angkanya.
   await call('POST', '/daily-reports', {
-    reportDate: '2026-08-28', userId: 2, newLeads: 5, totalClosing: 2, totalFollowup: 22,
+    reportDate: '2026-08-28', userId: 2, breakdownCounts: { Korea: 5 }, totalClosing: 2, totalFollowup: 22,
   });
 
   const { data } = await (await call('GET', '/daily-reports')).json();
@@ -79,7 +79,7 @@ test('saving the same day again corrects it instead of adding a second row', asy
 test('an empty Janji TF stays empty rather than becoming zero', async () => {
   await pool.query('DELETE FROM daily_reports');
   const { data } = await (await call('POST', '/daily-reports', {
-    reportDate: '2026-08-29', userId: 2, newLeads: 1, janjiTf: '',
+    reportDate: '2026-08-29', userId: 2, breakdownCounts: { Korea: 1 }, janjiTf: '',
   })).json();
   // Nol berarti tidak ada yang janji transfer; kosong berarti belum dihitung.
   assert.equal(data.janjiTf, null);
@@ -88,7 +88,7 @@ test('an empty Janji TF stays empty rather than becoming zero', async () => {
 test('reports are filtered by month so the page does not load everything', async () => {
   await pool.query('DELETE FROM daily_reports');
   for (const tanggal of ['2026-07-15', '2026-08-01', '2026-08-20']) {
-    await call('POST', '/daily-reports', { reportDate: tanggal, userId: 2, newLeads: 1 });
+    await call('POST', '/daily-reports', { reportDate: tanggal, userId: 2, breakdownCounts: { Korea: 1 } });
   }
 
   const agustus = await (await call('GET', '/daily-reports?month=2026-08')).json();
@@ -99,7 +99,7 @@ test('reports are filtered by month so the page does not load everything', async
 
 test('removing a CS takes their reports with them', async () => {
   await pool.query('DELETE FROM daily_reports');
-  await call('POST', '/daily-reports', { reportDate: '2026-09-01', userId: 2, newLeads: 1 });
+  await call('POST', '/daily-reports', { reportDate: '2026-09-01', userId: 2, breakdownCounts: { Korea: 1 } });
   await pool.query('DELETE FROM users WHERE id = 2');
 
   const sisa = await pool.query('SELECT count(*)::int AS n FROM daily_reports');
@@ -138,16 +138,45 @@ test('computed figures arrive as a starting point', async () => {
   const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
   const dita = data.rows.find((r) => r.picName === 'Dita');
   assert.equal(dita.computed.newLeads, 2);
-  assert.equal(dita.computed.breakdown, 'Korea = 2');
+  assert.deepEqual(dita.computed.breakdownCounts, { Korea: 2 });
   assert.equal(dita.saved, null, 'belum disimpan sampai admin menyimpannya');
 });
 
 test('a saved report is returned alongside what the data says', async () => {
-  await call('POST', '/daily-reports', { reportDate: '2026-09-01', userId: 3, newLeads: 5 });
+  await call('POST', '/daily-reports', { reportDate: '2026-09-01', userId: 3, breakdownCounts: { Korea: 5 } });
 
   const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
   const dita = data.rows.find((r) => r.picName === 'Dita');
   assert.equal(dita.saved.newLeads, 5, 'yang tersimpan yang berlaku');
   // Hitungannya tetap dikirim, supaya selisihnya bisa terlihat.
   assert.equal(dita.computed.newLeads, 2);
+});
+
+test('New Leads is the sum of the package numbers, never typed', async () => {
+  await pool.query('DELETE FROM daily_reports');
+  const { data } = await (await call('POST', '/daily-reports', {
+    reportDate: '2026-09-05',
+    userId: 3,
+    // newLeads sengaja dikirim salah; yang berlaku tetap jumlah rinciannya.
+    newLeads: 999,
+    breakdownCounts: { Korea: 2, 'Eropa Barat': 3 },
+  })).json();
+  assert.equal(data.newLeads, 5);
+});
+
+test('a package left at zero is not stored', async () => {
+  await pool.query('DELETE FROM daily_reports');
+  const { data } = await (await call('POST', '/daily-reports', {
+    reportDate: '2026-09-06',
+    userId: 3,
+    breakdownCounts: { Korea: 2, Vietnam: 0, Hongkong: '' },
+  })).json();
+  // Ketiadaan sudah berarti nol, jadi tidak perlu disimpan.
+  assert.deepEqual(data.breakdownCounts, { Korea: 2 });
+  assert.equal(data.newLeads, 2);
+});
+
+test('the day lists the packages that can be columns', async () => {
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  assert.ok(Array.isArray(data.packages));
 });
