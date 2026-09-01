@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, Upload, Download, Send } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, Download, Send, ArrowUp, ArrowDown } from 'lucide-react';
 import api from '../api/client';
 import useToastStore from '../store/toastStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -9,6 +9,7 @@ import LeadDetailSheet from '../components/LeadDetailSheet';
 import usePermissions from '../hooks/usePermissions';
 import Skeleton, { SkeletonRows } from '../components/Skeleton';
 import EditableCell from '../components/EditableCell';
+import { sortLeads } from '../utils/leadSort';
 import {
   followUpState, daysSinceContact, withFollowUpToday, willShiftFollowUps,
   DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS,
@@ -43,6 +44,25 @@ const EDITABLE_FIELDS = [
 ];
 
 const DATE_FIELDS = new Set(['entryDate', 'followUp1', 'followUp2', 'followUp3']);
+
+// Kolom tabel, sekaligus penentu urutan pengurutan. `field` null = tidak bisa
+// diurutkan (nomor baris dan tombol aksi).
+const COLUMNS = [
+  { field: null, label: 'No.', width: '3%' },
+  { field: 'entryDate', label: 'Masuk', width: '7%' },
+  { field: 'name', label: 'Nama', width: '10%' },
+  { field: 'whatsapp', label: 'No. WhatsApp', width: '11%' },
+  { field: 'picSales', label: 'PIC', width: '7%' },
+  { field: 'status', label: 'Status', width: '7%' },
+  { field: 'packageName', label: 'Paket', width: '11%' },
+  { field: 'country', label: 'Destinasi', width: '8%' },
+  { field: 'followUp1', label: 'FU 1', width: '6%' },
+  { field: 'followUp2', label: 'FU 2', width: '6%' },
+  { field: 'followUp3', label: 'FU 3', width: '6%' },
+  { field: 'notes', label: 'Notes', width: '11%' },
+  { field: null, label: 'Aksi', width: '7%', align: 'right' },
+];
+
 
 function toInputDate(value) {
   if (!value) return '';
@@ -102,6 +122,7 @@ export default function Leads() {
   const [packages, setPackages] = useState([]);
   const [sendTarget, setSendTarget] = useState(null);
   const [marking, setMarking] = useState(false);
+  const [sort, setSort] = useState({ field: 'entryDate', dir: 'desc' });
   const [editingCell, setEditingCell] = useState(null); // { id, field }
   const [rowBusy, setRowBusy] = useState(null);
 
@@ -167,6 +188,17 @@ export default function Leads() {
     () => [{ value: '', label: '— tanpa paket —' }, ...packages.map((p) => ({ value: String(p.id), label: p.name }))],
     [packages]
   );
+
+  const sorted = useMemo(() => sortLeads(filtered, sort), [filtered, sort]);
+
+  function toggleSort(field) {
+    if (!field) return;
+    setSort((s) =>
+      s.field === field
+        ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { field, dir: field === 'entryDate' ? 'desc' : 'asc' }
+    );
+  }
 
   const fuCounts = useMemo(() => {
     let due = 0, overdue = 0;
@@ -504,9 +536,9 @@ export default function Leads() {
             {search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all' ? 'Tidak ada lead yang cocok.' : 'Belum ada lead.'}
           </div>
         )}
-        {!loading && filtered.length > 0 && (
+        {!loading && sorted.length > 0 && (
           <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
-            {filtered.map((l, idx) => {
+            {sorted.map((l, idx) => {
               const doneCount = [l.followUp1, l.followUp2, l.followUp3].filter(Boolean).length;
               return (
                 <button
@@ -515,7 +547,9 @@ export default function Leads() {
                   className="w-full text-left px-4 py-3 border-b border-gray-med last:border-b-0 flex flex-col gap-1 cursor-pointer active:bg-gray-light"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-semibold text-gray-dark truncate min-w-0">{l.whatsapp}</div>
+                    <div className="text-sm font-semibold text-gray-dark truncate min-w-0">
+                      {l.name || l.whatsapp}
+                    </div>
                     <span
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
                       style={STATUS_STYLE[l.status] || { background: '#f3f4f6', color: '#374151' }}
@@ -525,7 +559,8 @@ export default function Leads() {
                   </div>
                   <div className="flex items-center justify-between gap-3 text-xs text-secondary">
                     <div className="truncate min-w-0">
-                      {[l.picSales, l.country, fmtDate(l.entryDate)].filter(Boolean).join(' · ')}
+                      {[l.name ? l.whatsapp : null, l.picSales, l.packageName || l.country, fmtDate(l.entryDate)]
+                        .filter(Boolean).join(' · ')}
                     </div>
                     <div className="flex gap-1 shrink-0" title={`${doneCount} dari 3 follow-up`}>
                       {[0, 1, 2].map((i) => (
@@ -547,35 +582,27 @@ export default function Leads() {
       <div className="hidden lg:block bg-surface border border-gray-med rounded-xl overflow-x-auto">
         <table className="w-full min-w-[1180px] text-xs table-fixed">
           <colgroup>
-            <col className="w-[3%]" />
-            <col className="w-[7%]" />
-            <col className="w-[10%]" />
-            <col className="w-[11%]" />
-            <col className="w-[7%]" />
-            <col className="w-[7%]" />
-            <col className="w-[11%]" />
-            <col className="w-[8%]" />
-            <col className="w-[6%]" />
-            <col className="w-[6%]" />
-            <col className="w-[6%]" />
-            <col className="w-[11%]" />
-            <col className="w-[7%]" />
+            {COLUMNS.map((c, i) => <col key={i} style={{ width: c.width }} />)}
           </colgroup>
           <thead>
             <tr className="border-b border-gray-med bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary sticky top-0 z-10">
-              <th className="text-left px-2 py-2.5">No.</th>
-              <th className="text-left px-2 py-2.5">Masuk</th>
-              <th className="text-left px-2 py-2.5">Nama</th>
-              <th className="text-left px-2 py-2.5">No. WhatsApp</th>
-              <th className="text-left px-2 py-2.5">PIC</th>
-              <th className="text-left px-2 py-2.5">Status</th>
-              <th className="text-left px-2 py-2.5">Paket</th>
-              <th className="text-left px-2 py-2.5">Destinasi</th>
-              <th className="text-left px-2 py-2.5">FU 1</th>
-              <th className="text-left px-2 py-2.5">FU 2</th>
-              <th className="text-left px-2 py-2.5">FU 3</th>
-              <th className="text-left px-2 py-2.5">Notes</th>
-              <th className="text-right px-2 py-2.5">Aksi</th>
+              {COLUMNS.map((c, i) => {
+                const aktif = sort.field === c.field && c.field;
+                return (
+                  <th
+                    key={i}
+                    onClick={() => toggleSort(c.field)}
+                    title={c.field ? 'Klik untuk urutkan' : undefined}
+                    className={`px-2 py-2.5 ${c.align === 'right' ? 'text-right' : 'text-left'} ${c.field ? 'cursor-pointer select-none hover:text-gray-dark' : ''}`}
+                    style={aktif ? { color: 'var(--color-primary)' } : undefined}
+                  >
+                    <span className={`inline-flex items-center gap-1 ${c.align === 'right' ? 'justify-end' : ''}`}>
+                      {c.label}
+                      {aktif && (sort.dir === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -589,7 +616,7 @@ export default function Leads() {
                     : 'Belum ada lead.'}
               </td></tr>
             )}
-            {!loading && filtered.map((l, idx) => {
+            {!loading && sorted.map((l, idx) => {
               const cell = (field, props) => (
                 <EditableCell
                   {...props}
