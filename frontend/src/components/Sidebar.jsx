@@ -30,6 +30,7 @@ export default function Sidebar() {
     mineOverdue: useFollowUpStore((s) => s.mineOverdue),
     mineTotal: useFollowUpStore((s) => s.mineTotal),
   });
+  const billingDue = useFollowUpStore((s) => s.billingDue);
   const dueCount = badge.due;
   const overdueCount = badge.overdue;
   const initials = (user?.name || '?')
@@ -76,6 +77,15 @@ export default function Sidebar() {
               >
                 <Icon size={18} />
                 {!collapsed && item.label}
+                {item.to === '/billing' && billingDue > 0 && (
+                  <span
+                    className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shrink-0 ${collapsed ? 'absolute top-1 right-1' : 'ml-auto'}`}
+                    style={{ background: '#f59e0b', color: '#fff' }}
+                    title={`${billingDue} peserta belum bayar DP atau tiket`}
+                  >
+                    {billingDue > 99 ? '99+' : billingDue}
+                  </span>
+                )}
                 {item.to === '/leads' && dueCount > 0 && (
                   <span
                     className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shrink-0 ${collapsed ? 'absolute top-1 right-1' : 'ml-auto'}`}

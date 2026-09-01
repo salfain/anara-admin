@@ -133,3 +133,50 @@ test('a booking survives its departure being removed', async () => {
   assert.equal(data.length, 1);
   assert.equal(data[0].departureId, null);
 });
+
+async function keberangkatanBaru(tanggal) {
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const dep = await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date) VALUES ($1, $2) RETURNING id`,
+    [pkg, tanggal]
+  );
+  return dep.rows[0].id;
+}
+
+test('the summary counts people behind on DP or on the ticket', async () => {
+  await pool.query('DELETE FROM bookings');
+  const dep = await keberangkatanBaru('2027-06-01');
+  const booking = (await (await call('POST', '/bookings', {
+    departureId: dep, customerName: 'DITA',
+  })).json()).data;
+
+  // Empat orang: satu lunas, dua belum DP, satu sudah DP tapi belum tiket.
+  const nama = ['LUNAS', 'BELUM-A', 'BELUM-B', 'DP-SAJA'];
+  const ids = [];
+  for (const n of nama) {
+    ids.push((await (await call('POST', `/bookings/${booking.id}/participants`, { name: n })).json()).data.id);
+  }
+  await call('PUT', `/bookings/${booking.id}/participants/${ids[0]}`, { paidDp: true });
+  await call('PUT', `/bookings/${booking.id}/participants/${ids[0]}`, { paidTicket: true });
+  await call('PUT', `/bookings/${booking.id}/participants/${ids[3]}`, { paidDp: true });
+
+  const { data } = await (await call('GET', '/bookings/summary')).json();
+  assert.equal(data.total, 4);
+  assert.equal(data.unpaidDp, 2, 'BELUM-A dan BELUM-B');
+  assert.equal(data.unpaidTicket, 3, 'semua kecuali LUNAS');
+  // Satu orang bisa menunggak keduanya, jadi lencana memakai jumlah terbesar,
+  // bukan penjumlahan — 5 akan lebih banyak daripada jumlah pesertanya.
+  assert.equal(data.needsAttention, 3);
+});
+
+test('departures already gone are left out of the reminder', async () => {
+  await pool.query('DELETE FROM bookings');
+  const lampau = await keberangkatanBaru('2020-01-01');
+  const b = (await (await call('POST', '/bookings', { departureId: lampau, customerName: 'LAMA' })).json()).data;
+  await call('POST', `/bookings/${b.id}/participants`, { name: 'ORANG LAMA' });
+
+  const { data } = await (await call('GET', '/bookings/summary')).json();
+  // Menagih DP untuk trip yang sudah berangkat bukan pekerjaan hari ini, dan
+  // angkanya akan menumpuk sampai lencananya diabaikan.
+  assert.equal(data.total, 0);
+});

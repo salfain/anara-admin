@@ -21,6 +21,7 @@ export default function MobileBottomNav() {
     mineOverdue: useFollowUpStore((s) => s.mineOverdue),
     mineTotal: useFollowUpStore((s) => s.mineTotal),
   });
+  const billingDue = useFollowUpStore((s) => s.billingDue);
   const dueCount = badge.due;
   const overdueCount = badge.overdue;
   const primary = visible.slice(0, PRIMARY_COUNT);
@@ -49,6 +50,14 @@ export default function MobileBottomNav() {
                   >
                     <span className="relative flex">
                       <Icon size={19} color={isActive ? '#ffffff' : 'var(--color-secondary)'} />
+                      {item.to === '/billing' && billingDue > 0 && (
+                        <span
+                          className="absolute -top-1 -right-2 text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center text-white"
+                          style={{ background: '#f59e0b' }}
+                        >
+                          {billingDue > 9 ? '9+' : billingDue}
+                        </span>
+                      )}
                       {item.to === '/leads' && dueCount > 0 && (
                         <span
                           className="absolute -top-1 -right-2 text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center text-white"

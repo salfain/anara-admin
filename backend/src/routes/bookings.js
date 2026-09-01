@@ -5,6 +5,8 @@ const controller = require('../controllers/bookingsController');
 const router = express.Router();
 
 router.get('/', authenticate, requirePermission('billing.view'), controller.list);
+// Sebelum '/:id' supaya 'summary' tidak terbaca sebagai id.
+router.get('/summary', authenticate, requirePermission('billing.view'), controller.summary);
 router.post('/', authenticate, requirePermission('billing.manage'), controller.create);
 router.put('/:id', authenticate, requirePermission('billing.manage'), controller.update);
 router.delete('/:id', authenticate, requirePermission('billing.manage'), controller.remove);

@@ -47,6 +47,9 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  // 'dp' | 'tiket' | null — menyaring ke peserta yang belum bayar, supaya
+  // pertanyaan "siapa yang belum" terjawab namanya, bukan cuma angkanya.
+  const [tunggakan, setTunggakan] = useState(null);
   const [form, setForm] = useState({ invoiceNo: '', customerName: '' });
   const [adding, setAdding] = useState(false);
 
@@ -83,8 +86,23 @@ export default function Billing() {
       peserta: peserta.length,
       lunas: peserta.filter((p) => p.paidSettlement).length,
       belumDp: peserta.filter((p) => !p.paidDp).length,
+      belumTiket: peserta.filter((p) => !p.paidTicket).length,
     };
   }, [bookings]);
+
+  function belumBayar(p) {
+    if (tunggakan === 'dp') return !p.paidDp;
+    if (tunggakan === 'tiket') return !p.paidTicket;
+    return false;
+  }
+
+  // Invoice yang seluruh pesertanya sudah bayar ikut disembunyikan saat
+  // menyaring — kartu kosong hanya menambah gulir.
+  const terlihat = tunggakan
+    ? bookings
+        .map((b) => ({ ...b, participants: b.participants.filter(belumBayar) }))
+        .filter((b) => b.participants.length > 0)
+    : bookings;
 
   async function ubahPeserta(booking, peserta, field, value) {
     setSavingId(peserta.id);
@@ -165,7 +183,7 @@ export default function Billing() {
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
-        <select value={departureId} onChange={(e) => setDepartureId(e.target.value)} className={`${input} min-w-[260px]`}>
+        <select value={departureId} onChange={(e) => setDepartureId(e.target.value)} className={`${input} w-full sm:w-auto sm:min-w-[260px]`}>
           <option value="">Semua keberangkatan</option>
           {departures.map((d) => (
             <option key={d.id} value={d.id}>
@@ -176,14 +194,36 @@ export default function Billing() {
         {!loading && bookings.length > 0 && (
           <div className="text-xs text-secondary">
             {ringkasan.invoice} invoice · {ringkasan.peserta} peserta · {ringkasan.lunas} lunas
-            {ringkasan.belumDp > 0 && ` · ${ringkasan.belumDp} belum DP`}
           </div>
         )}
       </div>
 
+      {!loading && (ringkasan.belumDp > 0 || ringkasan.belumTiket > 0) && (
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <span className="text-secondary">Belum bayar:</span>
+          <TombolTunggakan
+            aktif={tunggakan === 'dp'}
+            jumlah={ringkasan.belumDp}
+            label="belum DP"
+            onClick={() => setTunggakan(tunggakan === 'dp' ? null : 'dp')}
+          />
+          <TombolTunggakan
+            aktif={tunggakan === 'tiket'}
+            jumlah={ringkasan.belumTiket}
+            label="belum bayar tiket"
+            onClick={() => setTunggakan(tunggakan === 'tiket' ? null : 'tiket')}
+          />
+          {tunggakan && (
+            <button onClick={() => setTunggakan(null)} className="h-7 px-2 text-xs text-secondary underline cursor-pointer">
+              Tampilkan semua
+            </button>
+          )}
+        </div>
+      )}
+
       {canManage && (
-        <form onSubmit={tambahBooking} className="bg-surface border border-gray-med rounded-xl p-4 flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
+        <form onSubmit={tambahBooking} className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-end">
+          <div className="flex flex-col gap-1.5 sm:flex-1 sm:min-w-[180px]">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Nomor Invoice</label>
             <input
               value={form.invoiceNo}
@@ -192,7 +232,7 @@ export default function Billing() {
               className={input}
             />
           </div>
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
+          <div className="flex flex-col gap-1.5 sm:flex-1 sm:min-w-[180px]">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Customer</label>
             <input
               value={form.customerName}
@@ -214,13 +254,15 @@ export default function Billing() {
 
       {loading && <Skeleton className="w-full" style={{ height: 200 }} />}
 
-      {!loading && bookings.length === 0 && (
+      {!loading && terlihat.length === 0 && (
         <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
-          Belum ada invoice untuk keberangkatan ini.
+          {tunggakan
+            ? 'Semua peserta sudah bayar untuk kategori ini.'
+            : 'Belum ada invoice untuk keberangkatan ini.'}
         </div>
       )}
 
-      {!loading && bookings.map((b) => (
+      {!loading && terlihat.map((b) => (
         <BookingCard
           key={b.id}
           booking={b}
@@ -229,6 +271,7 @@ export default function Billing() {
           onToggle={ubahPeserta}
           onAddParticipant={tambahPeserta}
           onDelete={setDeleteTarget}
+          sorot={tunggakan}
         />
       ))}
 
@@ -247,7 +290,23 @@ export default function Billing() {
   );
 }
 
-function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant, onDelete }) {
+/** Hitungan tunggakan yang sekaligus jadi penyaring — angkanya bisa dibuka. */
+function TombolTunggakan({ aktif, jumlah, label, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={jumlah === 0}
+      className="h-7 px-3 rounded-full text-xs font-semibold cursor-pointer border disabled:opacity-50 disabled:cursor-default"
+      style={aktif
+        ? { background: 'var(--color-warn-soft)', color: 'var(--color-warn-soft-text)', borderColor: 'transparent' }
+        : { background: 'transparent', color: 'var(--color-secondary)', borderColor: 'var(--color-gray-med)' }}
+    >
+      {jumlah} {label}
+    </button>
+  );
+}
+
+function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant, onDelete, sorot }) {
   const [namaBaru, setNamaBaru] = useState('');
 
   return (
@@ -272,7 +331,7 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full min-w-[900px] text-xs border-collapse">
           <thead>
             <tr className="bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary">
@@ -296,7 +355,11 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
               </tr>
             )}
             {booking.participants.map((p) => (
-              <tr key={p.id} className={`border-t border-gray-med ${savingId === p.id ? 'opacity-60' : ''}`}>
+              <tr
+                key={p.id}
+                className={`border-t border-gray-med ${savingId === p.id ? 'opacity-60' : ''}`}
+                style={sorot ? { borderLeft: '3px solid #f59e0b' } : undefined}
+              >
                 <td className="px-3 py-2 text-gray-dark">
                   {p.name}
                   {p.origin && <span className="text-secondary"> · {p.origin}</span>}
@@ -340,6 +403,54 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
         </table>
       </div>
 
+      {/* Ponsel: satu kartu per peserta. Dua belas kolom tidak terbaca di layar
+          selebar ini, dan menggeser ke samping sambil mencentang mudah salah. */}
+      <div className="lg:hidden flex flex-col">
+        {booking.participants.length === 0 && (
+          <div className="px-4 py-4 text-center text-xs text-secondary">Belum ada peserta.</div>
+        )}
+        {booking.participants.map((p) => (
+          <div
+            key={p.id}
+            className={`px-4 py-3 border-t border-gray-med flex flex-col gap-2.5 ${savingId === p.id ? 'opacity-60' : ''}`}
+            style={sorot ? { borderLeft: '3px solid #f59e0b' } : undefined}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-medium text-gray-dark truncate">{p.name}</div>
+              {canManage && (
+                <button
+                  onClick={() => onDelete({ kind: 'participant', id: p.id, bookingId: booking.id, label: p.name })}
+                  className="w-6 h-6 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0"
+                  style={{ background: '#ef4444' }}
+                >
+                  <Trash2 size={11} />
+                </button>
+              )}
+            </div>
+
+            {/* Centang jadi tombol, bukan kotak kecil — jempol butuh sasaran
+                yang lebih besar daripada kursor. */}
+            <div className="flex flex-wrap gap-1.5">
+              {CENTANG.map((c) => (
+                <button
+                  key={c.field}
+                  disabled={!canManage}
+                  onClick={() => onToggle(booking, p, c.field, !p[c.field])}
+                  className="h-7 px-2.5 rounded-full text-[11px] font-semibold border cursor-pointer disabled:cursor-default"
+                  style={p[c.field]
+                    ? { background: 'var(--color-success-soft)', color: 'var(--color-success-soft-text)', borderColor: 'transparent' }
+                    : { background: 'transparent', color: 'var(--color-secondary)', borderColor: 'var(--color-gray-med)' }}
+                >
+                  {p[c.field] ? '✓ ' : ''}{c.group === 'Booking Tiket' ? `Booking ${c.label}` : c.label}
+                </button>
+              ))}
+            </div>
+
+            <DetailTiket peserta={p} booking={booking} canManage={canManage} onToggle={onToggle} />
+          </div>
+        ))}
+      </div>
+
       {canManage && (
         <div className="px-3 py-2 border-t border-gray-med flex gap-2">
           <input
@@ -365,6 +476,46 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Kode booking dan nama pesawat, disembunyikan sampai diminta.
+ *
+ * Empat kolom teks per peserta memenuhi layar ponsel, padahal kebanyakan waktu
+ * yang dicari cuma status pembayaran. Dibuka saat memang perlu diisi.
+ */
+function DetailTiket({ peserta, booking, canManage, onToggle }) {
+  const [buka, setBuka] = useState(false);
+  const terisi = TEKS.filter((t) => peserta[t.field]).length;
+
+  if (!buka) {
+    return (
+      <button
+        onClick={() => setBuka(true)}
+        className="text-[11px] text-secondary underline text-left cursor-pointer"
+      >
+        {terisi > 0 ? `Detail tiket (${terisi} terisi)` : 'Isi detail tiket'}
+      </button>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {TEKS.map((t) => (
+        <label key={t.field} className="flex flex-col gap-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary">{t.label}</span>
+          <input
+            defaultValue={peserta[t.field] || ''}
+            disabled={!canManage}
+            onBlur={(e) =>
+              e.target.value !== (peserta[t.field] || '') && onToggle(booking, peserta, t.field, e.target.value)
+            }
+            className="h-8 px-2 text-xs bg-surface text-gray-dark border border-gray-med rounded-lg focus:outline-none focus:border-primary"
+          />
+        </label>
+      ))}
     </div>
   );
 }

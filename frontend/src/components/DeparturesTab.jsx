@@ -136,8 +136,8 @@ export default function DeparturesTab({ canManage }) {
       </div>
 
       {canManage && (
-        <form onSubmit={tambah} className="bg-surface border border-gray-med rounded-xl p-4 flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+        <form onSubmit={tambah} className="bg-surface border border-gray-med rounded-xl p-4 grid grid-cols-2 lg:flex lg:flex-wrap gap-3 items-end">
+          <div className="flex flex-col gap-1.5 col-span-2 lg:flex-1 lg:min-w-[200px]">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Paket</label>
             <select value={form.packageId} onChange={(e) => setForm({ ...form, packageId: e.target.value })} className={input}>
               <option value="">Pilih paket...</option>
@@ -165,7 +165,7 @@ export default function DeparturesTab({ canManage }) {
               className={input}
             />
           </div>
-          <div className="flex flex-col gap-1.5 w-[110px]">
+          <div className="flex flex-col gap-1.5 lg:w-[110px]">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Kapasitas</label>
             <input
               type="number"
@@ -186,7 +186,7 @@ export default function DeparturesTab({ canManage }) {
           <button
             type="submit"
             disabled={adding}
-            className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60"
+            className="h-9 px-4 col-span-2 lg:col-span-1 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer disabled:opacity-60"
             style={{ background: '#2563eb' }}
           >
             {adding ? 'Menambah...' : 'Tambah'}
@@ -194,7 +194,7 @@ export default function DeparturesTab({ canManage }) {
         </form>
       )}
 
-      <div className="bg-surface border border-gray-med rounded-xl overflow-x-auto">
+      <div className="hidden lg:block bg-surface border border-gray-med rounded-xl overflow-x-auto">
         <table className="w-full min-w-[620px] text-sm border-collapse">
           <thead>
             <tr className="bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
@@ -266,6 +266,62 @@ export default function DeparturesTab({ canManage }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Ponsel: satu kartu per keberangkatan. Tabel tujuh kolom di layar
+          selebar telapak tangan hanya bisa dibaca dengan menggeser. */}
+      <div className="lg:hidden flex flex-col gap-3">
+        {loading && Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-surface border border-gray-med rounded-xl p-4">
+            <Skeleton className="h-4 w-40 mb-2" />
+            <Skeleton className="h-3.5 w-24" />
+          </div>
+        ))}
+        {!loading && terlihat.length === 0 && (
+          <div className="bg-surface border border-gray-med rounded-xl py-10 text-center text-sm text-secondary">
+            {upcomingOnly ? 'Belum ada keberangkatan yang akan datang.' : 'Belum ada jadwal keberangkatan.'}
+          </div>
+        )}
+        {!loading && terlihat.map((r) => (
+          <div key={r.id} className={`bg-surface border border-gray-med rounded-xl p-4 flex flex-col gap-3 ${savingId === r.id ? 'opacity-60' : ''}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-dark">{r.packageName}</div>
+                <div className="text-xs text-secondary mt-0.5">
+                  {fmtTanggal(r.departDate)}
+                  {r.returnDate && ` - ${fmtTanggal(r.returnDate)}`}
+                </div>
+              </div>
+              {canManage && (
+                <button
+                  onClick={() => setDeleteTarget(r)}
+                  className="w-7 h-7 rounded-full btn-3d-danger btn-3d-sm text-white flex items-center justify-center cursor-pointer shrink-0"
+                  style={{ background: '#ef4444' }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <SisaSeat row={r} />
+              {canManage ? (
+                <select
+                  value={r.seatStatus}
+                  onChange={(e) => ubahStatus(r, e.target.value)}
+                  className="h-7 px-2 text-xs rounded-full border-0 font-semibold cursor-pointer"
+                  style={warnaSeat(r.seatStatus)}
+                >
+                  {SEAT_UMUM.map((st) => <option key={st} value={st}>{st}</option>)}
+                  {!SEAT_UMUM.includes(r.seatStatus) && <option value={r.seatStatus}>{r.seatStatus}</option>}
+                </select>
+              ) : (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={warnaSeat(r.seatStatus)}>
+                  {r.seatStatus}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       <ConfirmDialog

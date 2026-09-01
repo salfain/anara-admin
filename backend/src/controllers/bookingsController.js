@@ -217,4 +217,42 @@ async function removeParticipant(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, remove, addParticipant, updateParticipant, removeParticipant };
+/**
+ * Berapa peserta yang belum bayar, untuk lencana di navigasi.
+ *
+ * Hanya keberangkatan yang belum lewat: menagih DP untuk trip yang sudah
+ * berangkat bukan pekerjaan hari ini, dan angkanya akan terus menumpuk sampai
+ * lencananya diabaikan.
+ */
+async function summary(req, res, next) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE NOT bp.paid_dp)::int AS unpaid_dp,
+         COUNT(*) FILTER (WHERE NOT bp.paid_ticket)::int AS unpaid_ticket,
+         COUNT(*) FILTER (WHERE NOT bp.paid_settlement)::int AS unsettled,
+         COUNT(*)::int AS total
+       FROM booking_participants bp
+       JOIN bookings b ON b.id = bp.booking_id
+       JOIN package_departures d ON d.id = b.departure_id
+       WHERE d.depart_date >= CURRENT_DATE`
+    );
+
+    const r = rows[0];
+    res.json({
+      data: {
+        unpaidDp: r.unpaid_dp,
+        unpaidTicket: r.unpaid_ticket,
+        unsettled: r.unsettled,
+        total: r.total,
+        // Satu orang bisa menunggak DP dan tiket sekaligus; yang dipakai untuk
+        // lencana adalah jumlah ORANG, bukan jumlah tunggakan.
+        needsAttention: Math.max(r.unpaid_dp, r.unpaid_ticket),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, summary, create, update, remove, addParticipant, updateParticipant, removeParticipant };

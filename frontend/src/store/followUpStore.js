@@ -9,12 +9,15 @@ import api from '../api/client';
  * menghitungnya untuk Dashboard — jadi tidak perlu memuat seluruh lead hanya
  * untuk menampilkan satu angka.
  */
-const KOSONG = { due: 0, overdue: 0, mineDue: 0, mineOverdue: 0, mineTotal: 0 };
+const KOSONG = { due: 0, overdue: 0, mineDue: 0, mineOverdue: 0, mineTotal: 0, billingDue: 0 };
 
 const useFollowUpStore = create((set) => ({
   ...KOSONG,
 
   refresh: async () => {
+    // Dua permintaan terpisah supaya hak akses yang berbeda tidak saling
+    // menjatuhkan: yang boleh lihat penagihan tapi tidak lihat lead tetap
+    // dapat lencananya.
     try {
       const { data } = await api.get('/leads/summary');
       const fu = data.data.followUp || {};
@@ -26,9 +29,14 @@ const useFollowUpStore = create((set) => ({
         mineTotal: fu.mineTotal || 0,
       });
     } catch {
-      // Tidak punya hak akses leads, atau server sedang bermasalah. Lencana
-      // yang hilang jauh lebih baik daripada error yang muncul di tiap halaman.
-      set(KOSONG);
+      set({ due: 0, overdue: 0, mineDue: 0, mineOverdue: 0, mineTotal: 0 });
+    }
+
+    try {
+      const { data } = await api.get('/bookings/summary');
+      set({ billingDue: data.data.needsAttention || 0 });
+    } catch {
+      set({ billingDue: 0 });
     }
   },
 }));
