@@ -47,6 +47,9 @@ export default function DailyReports() {
   const [tanggal, setTanggal] = useState(hariIni);
   const [rows, setRows] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [kelolaKolom, setKelolaKolom] = useState(false);
+  const [kolomBaru, setKolomBaru] = useState('');
+  const [kategori, setKategori] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -65,6 +68,37 @@ export default function DailyReports() {
   }, [tanggal, push]);
 
   useEffect(() => { fetchDay(true); }, [fetchDay]);
+
+  const fetchKategori = useCallback(() => {
+    api.get('/daily-reports/categories')
+      .then(({ data }) => setKategori(data.data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { if (kelolaKolom) fetchKategori(); }, [kelolaKolom, fetchKategori]);
+
+  async function tambahKolom(e) {
+    e.preventDefault();
+    if (!kolomBaru.trim()) return;
+    try {
+      await api.post('/daily-reports/categories', { label: kolomBaru.trim() });
+      setKolomBaru('');
+      fetchKategori();
+      fetchDay(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menambah kolom', 'error');
+    }
+  }
+
+  async function hapusKolom(id) {
+    try {
+      await api.delete(`/daily-reports/categories/${id}`);
+      fetchKategori();
+      fetchDay(false);
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menghapus kolom', 'error');
+    }
+  }
 
   const total = useMemo(
     () =>
@@ -174,7 +208,7 @@ export default function DailyReports() {
       <div>
         <div className="text-[28px] font-bold text-gray-dark">Laporan Harian</div>
         <div className="text-sm text-secondary mt-1">
-          Semua CS untuk satu hari, angkanya sudah dihitung dari data lead. Ubah yang perlu, lalu simpan.
+          Semua CS untuk satu hari. Isi angka per tujuan, sisanya sudah dihitung dari data lead.
         </div>
       </div>
 
@@ -196,6 +230,14 @@ export default function DailyReports() {
             {total.newLeads} lead baru · {total.totalClosing} closing · {total.totalFollowup} follow up
           </div>
         )}
+        {canManage && (
+          <button
+            onClick={() => setKelolaKolom((v) => !v)}
+            className="h-9 px-3 text-xs text-secondary underline cursor-pointer"
+          >
+            {kelolaKolom ? 'Tutup kolom' : 'Atur kolom'}
+          </button>
+        )}
         {canManage && belumTersimpan > 0 && (
           <button
             onClick={simpanSemua}
@@ -208,11 +250,43 @@ export default function DailyReports() {
         )}
       </div>
 
+      {kelolaKolom && canManage && (
+        <div className="bg-surface border border-gray-med rounded-xl p-4 flex flex-col gap-3">
+          <div className="text-xs text-secondary">
+            Kolom rincian di laporan. Menghapus kolom tidak menghapus angka yang sudah tersimpan.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {kategori.map((k) => (
+              <span key={k.id} className="h-7 pl-3 pr-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-gray-med text-gray-dark">
+                {k.label}
+                <button
+                  onClick={() => hapusKolom(k.id)}
+                  className="w-5 h-5 rounded-full text-secondary hover:text-red-600 cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <form onSubmit={tambahKolom} className="flex gap-2">
+            <input
+              value={kolomBaru}
+              onChange={(e) => setKolomBaru(e.target.value)}
+              placeholder="Tambah tujuan, misal: Jepang"
+              className={`${input} flex-1 max-w-[280px]`}
+            />
+            <button type="submit" className="h-9 px-4 text-white rounded-full btn-3d text-sm font-semibold cursor-pointer" style={{ background: '#2563eb' }}>
+              Tambah
+            </button>
+          </form>
+        </div>
+      )}
+
       {loading && <Skeleton className="w-full" style={{ height: 220 }} />}
 
       {!loading && rows.length === 0 && (
         <div className="text-center text-sm text-secondary py-16 bg-surface rounded-xl border border-gray-med">
-          Belum ada user aktif.
+          Belum ada CS aktif.
         </div>
       )}
 

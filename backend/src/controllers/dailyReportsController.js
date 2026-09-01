@@ -80,6 +80,14 @@ async function save(req, res, next) {
     if (!reportDate) return res.status(400).json({ error: 'Tanggal laporan wajib diisi' });
     if (!userId) return res.status(400).json({ error: 'CS wajib dipilih' });
 
+    // Dijaga di server juga: tanpa ini, permintaan langsung ke API masih bisa
+    // membuat laporan atas nama admin.
+    const pemilik = await pool.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+    if (pemilik.rows.length === 0) return res.status(404).json({ error: 'User tidak ditemukan' });
+    if (pemilik.rows[0].role !== 'cs') {
+      return res.status(400).json({ error: 'Laporan harian hanya untuk CS' });
+    }
+
     const rincian = bersihkanRincian(req.body.breakdownCounts);
 
     const result = await pool.query(
@@ -151,7 +159,9 @@ async function day(req, res, next) {
     const tanggal = req.query.date || new Date().toISOString().slice(0, 10);
 
     const [users, tersimpan, baru, closing, difollowup, perPaket, paketAktif] = await Promise.all([
-      pool.query(`SELECT id, name FROM users WHERE status = 'active' ORDER BY name ASC`),
+      // Laporan harian adalah laporan CS. Admin dan role lain tidak punya
+      // barisnya, jadi tidak muncul di sini.
+      pool.query(`SELECT id, name FROM users WHERE status = 'active' AND role = 'cs' ORDER BY name ASC`),
       pool.query(`SELECT * FROM daily_reports WHERE report_date = $1::date`, [tanggal]),
       pool.query(
         `SELECT pic_user_id AS uid, COUNT(*)::int AS n FROM leads
@@ -177,15 +187,9 @@ async function day(req, res, next) {
          GROUP BY 1, 2 ORDER BY n DESC`,
         [tanggal]
       ),
-      // Paket yang jadi kolom: yang masih punya keberangkatan ke depan.
-      // Daftarnya ikut berubah sendiri saat trip lama selesai dan yang baru
-      // dibuka, tanpa ada yang perlu menyunting daftar kolom.
-      pool.query(
-        `SELECT DISTINCT p.name FROM packages p
-         JOIN package_departures d ON d.package_id = p.id
-         WHERE d.depart_date >= CURRENT_DATE
-         ORDER BY p.name ASC`
-      ),
+      // Kolom rincian: daftar tujuan yang diatur tim, bukan diturunkan dari
+      // nama paket yang panjang-panjang.
+      pool.query('SELECT label FROM report_categories ORDER BY sort_order ASC, label ASC'),
     ]);
 
     const angkaPer = (rows) => new Map(rows.map((r) => [r.uid, r.n]));
@@ -194,10 +198,18 @@ async function day(req, res, next) {
     const nFollowup = angkaPer(difollowup.rows);
     const simpanPer = new Map(tersimpan.rows.map((r) => [r.user_id, r]));
 
+    // Angka hitungan dikelompokkan menurut nama paket atau destinasi, sedangkan
+    // kolomnya pakai label tim. Yang namanya sama dicocokkan; sisanya dibiarkan
+    // kosong daripada ditebak dan salah taruh.
+    const labelKolom = new Map(
+      paketAktif.rows.map((p) => [p.label.trim().toLowerCase(), p.label])
+    );
     const rincianPer = new Map();
     for (const r of perPaket.rows) {
+      const cocok = labelKolom.get(String(r.label).trim().toLowerCase());
+      if (!cocok) continue;
       if (!rincianPer.has(r.uid)) rincianPer.set(r.uid, {});
-      rincianPer.get(r.uid)[r.label] = r.n;
+      rincianPer.get(r.uid)[cocok] = r.n;
     }
 
     const data = users.rows.map((u) => {
@@ -219,13 +231,18 @@ async function day(req, res, next) {
     // Paket yang muncul di data hari itu atau di laporan tersimpan ikut jadi
     // kolom walau keberangkatannya sudah lewat, supaya angka yang sudah
     // tercatat tidak hilang dari tampilan.
-    const kolom = new Set(paketAktif.rows.map((p) => p.name));
+    // Urutan daftar dipertahankan; label yang terlanjur punya angka tapi sudah
+    // dihapus dari daftar tetap ditampilkan di belakang, supaya data yang
+    // sudah tercatat tidak hilang dari layar.
+    const kolom = paketAktif.rows.map((p) => p.label);
+    const tambahan = new Set();
     for (const row of data) {
-      Object.keys(row.computed.breakdownCounts).forEach((k) => kolom.add(k));
-      if (row.saved) Object.keys(row.saved.breakdownCounts).forEach((k) => kolom.add(k));
+      Object.keys(row.saved?.breakdownCounts || {}).forEach((k) => {
+        if (!kolom.includes(k)) tambahan.add(k);
+      });
     }
 
-    res.json({ data: { date: tanggal, packages: [...kolom].sort(), rows: data } });
+    res.json({ data: { date: tanggal, packages: [...kolom, ...tambahan], rows: data } });
   } catch (err) {
     next(err);
   }

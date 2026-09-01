@@ -272,6 +272,30 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(report_date DESC);
 
+-- Kolom rincian di laporan harian: daftar tujuan yang dipakai tim.
+--
+-- Tidak diturunkan dari tabel paket. Nama paket itu panjang ("6D WINTER
+-- HOLIDAY HONGKONG SHENZHEN...") dan tidak muat jadi judul kolom, sedangkan
+-- daftar ini kesepakatan tim yang berubah sendiri saat membuka tujuan baru.
+CREATE TABLE IF NOT EXISTS report_categories (
+  id SERIAL PRIMARY KEY,
+  label VARCHAR(60) NOT NULL UNIQUE,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Isi awal sesuai laporan yang sudah berjalan. Hanya sekali: begitu tim
+-- menyesuaikan daftarnya, migrate ulang tidak menimpanya.
+INSERT INTO report_categories (label, sort_order)
+SELECT * FROM (VALUES
+  ('3 negara', 1),
+  ('eropa barat', 2),
+  ('Hongkong', 3),
+  ('Vietnam', 4),
+  ('Korea', 5)
+) AS awal(label, sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM report_categories);
+
 -- Penagihan: tahap setelah lead closing, sampai peserta berangkat.
 --
 -- Satu invoice punya satu customer dan beberapa peserta — di spreadsheet ini

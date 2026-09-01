@@ -8,7 +8,6 @@ import useThemeStore from '../store/themeStore';
 import usePermissions from '../hooks/usePermissions';
 import { badgeCounts } from '../utils/followUpBadge';
 import Skeleton from '../components/Skeleton';
-import DailyReportCard from '../components/DailyReportCard';
 
 const STATUS_COLORS = {
   Baru: '#2563eb',
@@ -205,8 +204,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
-      {can('leads.view') && <DailyReportCard />}
 
       {bolehLihatPaket && departures.length > 0 && (
         <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">

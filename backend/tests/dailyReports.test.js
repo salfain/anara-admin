@@ -1,4 +1,4 @@
-// Laporan harian yang disimpan, diisi admin.
+// Laporan harian yang disimpan. Barisnya hanya untuk CS.
 
 const test = require('node:test');
 const assert = require('node:assert');
@@ -117,7 +117,6 @@ test('one day returns every active CS, saved or not', async () => {
 
   // Barisnya selalu ada, karena orangnya memang selalu ada. Tidak ada langkah
   // membuat baris lebih dulu.
-  assert.ok(nama.includes('Admin'));
   assert.ok(nama.includes('Dita'));
   assert.ok(!nama.includes('Sudah Keluar'), 'yang belum aktif tidak ikut');
   assert.equal(data.rows.every((r) => r.saved === null), true);
@@ -179,4 +178,49 @@ test('a package left at zero is not stored', async () => {
 test('the day lists the packages that can be columns', async () => {
   const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
   assert.ok(Array.isArray(data.packages));
+});
+
+test('the report columns are the team list, seeded as it already runs', async () => {
+  const { data } = await (await call('GET', '/daily-reports/categories')).json();
+  const label = data.map((k) => k.label);
+  assert.deepEqual(label, ['3 negara', 'eropa barat', 'Hongkong', 'Vietnam', 'Korea']);
+});
+
+test('a new destination can be added as a column', async () => {
+  await call('POST', '/daily-reports/categories', { label: 'Jepang' });
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  assert.ok(data.packages.includes('Jepang'));
+  // Urutan daftar dipertahankan, yang baru masuk di belakang.
+  assert.equal(data.packages[0], '3 negara');
+});
+
+test('only CS appear as rows', async () => {
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-01')).json();
+  // Admin tidak punya laporan harian, jadi tidak boleh jadi baris.
+  assert.ok(!data.rows.some((r) => r.picName === 'Admin'));
+  assert.ok(data.rows.some((r) => r.picName === 'Dita'));
+});
+
+test('a report cannot be filed against someone who is not CS', async () => {
+  // Dijaga di server, bukan hanya disembunyikan di tampilan.
+  const res = await call('POST', '/daily-reports', { reportDate: '2026-09-10', userId: 1 });
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /hanya untuk CS/);
+});
+
+test('deleting a column keeps figures already reported', async () => {
+  await pool.query('DELETE FROM daily_reports');
+  await call('POST', '/daily-reports', {
+    reportDate: '2026-09-11', userId: 3, breakdownCounts: { Jepang: 4 },
+  });
+
+  const kategori = (await (await call('GET', '/daily-reports/categories')).json()).data;
+  const jepang = kategori.find((k) => k.label === 'Jepang');
+  await call('DELETE', `/daily-reports/categories/${jepang.id}`);
+
+  const { data } = await (await call('GET', '/daily-reports/day?date=2026-09-11')).json();
+  // Laporan yang sudah dikirim ke grup tidak boleh berubah isinya.
+  assert.ok(data.packages.includes('Jepang'), 'kolomnya tetap tampil karena ada angkanya');
+  const dita = data.rows.find((r) => r.picName === 'Dita');
+  assert.equal(dita.saved.breakdownCounts.Jepang, 4);
 });
