@@ -272,6 +272,55 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(report_date DESC);
 
+-- Invoice. Berdiri sendiri, tidak terikat ke baris Penagihan: ada invoice untuk
+-- trip yang tidak dikelola di sana.
+--
+-- Nilai uang disimpan sebagai NUMERIC, bukan float. Harga tur berjumlah puluhan
+-- juta, dan pembulatan biner akan membuat sisa tagihan meleset beberapa rupiah
+-- tanpa ada yang tahu dari mana.
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  invoice_no VARCHAR(60) NOT NULL UNIQUE,
+  customer_name VARCHAR(255) NOT NULL,
+  customer_address VARCHAR(255),
+  customer_phone VARCHAR(60),
+  -- Ditulis apa adanya seperti di invoice: "29 DESEMBER 2026 - 03 JANUARI 2027".
+  -- Bukan dua kolom tanggal, karena yang dicetak memang satu baris teks.
+  departure_label VARCHAR(255),
+  invoice_date DATE,
+  ticket_payment_date DATE,
+  repayment_date DATE,
+  revision VARCHAR(120),
+  -- CS yang menangani. Di invoice tercetak dengan label "Customer".
+  cs_name VARCHAR(120),
+  notes TEXT,
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id SERIAL PRIMARY KEY,
+  invoice_id INT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  code VARCHAR(120),
+  description TEXT,
+  qty NUMERIC(12, 2) NOT NULL DEFAULT 1,
+  unit_price NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS invoice_payments (
+  id SERIAL PRIMARY KEY,
+  invoice_id INT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  paid_on DATE,
+  amount NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  note VARCHAR(255),
+  sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_invoice_payments_invoice ON invoice_payments(invoice_id, sort_order);
+
 -- Kolom rincian di laporan harian: daftar tujuan yang dipakai tim.
 --
 -- Tidak diturunkan dari tabel paket. Nama paket itu panjang ("6D WINTER

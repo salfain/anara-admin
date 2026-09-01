@@ -53,6 +53,32 @@
   color-scheme: dark;
 }
 
+/* Saat mencetak, hanya invoice yang ikut. Sisanya (sidebar, tombol, navigasi)
+   tidak ada gunanya di atas kertas dan akan memakan halaman pertama. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #invoice-print,
+  #invoice-print * {
+    visibility: visible;
+  }
+
+  #invoice-print {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}
+
 /* Skeleton placeholders. The sweep sits on top of a flat base tint so the
    effect reads on both themes without needing two sets of colors. */
 .skeleton {

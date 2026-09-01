@@ -8,6 +8,7 @@ import FollowUpKit from './pages/FollowUpKit';
 import Leads from './pages/Leads';
 import Packages from './pages/Packages';
 import Billing from './pages/Billing';
+import Invoices from './pages/Invoices';
 import DailyReports from './pages/DailyReports';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
@@ -91,6 +92,14 @@ export default function App() {
             element={
               <ProtectedRoute permission="leads.view">
                 <DailyReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute permission="billing.view">
+                <Invoices />
               </ProtectedRoute>
             }
           />
