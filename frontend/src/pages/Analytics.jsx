@@ -213,20 +213,39 @@ function MetricCard({ label, value, loading }) {
 }
 
 /** Ringkasan penjualan: sumber lead, hasilnya, dan siapa yang mengerjakan. */
+// Rentangnya sendiri, bukan yang dipakai tab quick replies: di sini yang
+// masuk akal adalah bulan berjalan dan beberapa bulan terakhir, bukan "hari ini".
+const SALES_RANGES = [
+  { key: 'all', label: 'Semua Waktu' },
+  { key: 'month', label: 'Bulan Ini' },
+  { key: 'quarter', label: '3 Bulan' },
+  { key: 'year', label: 'Tahun Ini' },
+];
+
+function salesRangeParams(key) {
+  const now = new Date();
+  const iso = (d) => d.toISOString().slice(0, 10);
+  if (key === 'month') return { start_date: iso(new Date(now.getFullYear(), now.getMonth(), 1)) };
+  if (key === 'quarter') return { start_date: iso(new Date(now.getFullYear(), now.getMonth() - 2, 1)) };
+  if (key === 'year') return { start_date: iso(new Date(now.getFullYear(), 0, 1)) };
+  return {};
+}
+
 function SalesTab({ tickColor }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState('all');
 
   const fetchSales = useCallback((showLoading = true) => {
     if (showLoading) setLoading(true);
-    return api.get('/analytics/sales')
+    return api.get('/analytics/sales', { params: salesRangeParams(range) })
       .then(({ data: res }) => setData(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [range]);
 
   useEffect(() => { fetchSales(true); }, [fetchSales]);
-  useAutoRefresh(() => fetchSales(false), 30000);
+  useAutoRefresh(() => fetchSales(false), 30000, [range]);
 
   const total = (data?.funnel || []).reduce((sum, f) => sum + f.count, 0);
   const won = (data?.funnel || []).find((f) => f.label === 'Sudah DP')?.count || 0;
@@ -235,6 +254,21 @@ function SalesTab({ tickColor }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex gap-2 flex-wrap">
+        {SALES_RANGES.map((rg) => (
+          <button
+            key={rg.key}
+            onClick={() => setRange(rg.key)}
+            className={`h-9 px-3.5 rounded-full text-[13px] font-semibold cursor-pointer ${range === rg.key ? 'btn-3d-sm btn-3d' : ''}`}
+            style={range === rg.key
+              ? { background: '#2563eb', color: '#fff' }
+              : { background: 'var(--color-surface)', color: 'var(--color-gray-dark)', border: '1px solid var(--color-gray-med)' }}
+          >
+            {rg.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard label="Total Lead" value={total} loading={loading} />
         <MetricCard label="Closing" value={won} loading={loading} />
@@ -252,6 +286,7 @@ function SalesTab({ tickColor }) {
 
       {!loading && selesai > 0 && (
         <div className="text-xs text-secondary -mt-3">
+          {range !== 'all' && 'Dihitung dari lead yang masuk pada periode ini. '}
           Konversi dihitung dari {selesai} lead yang sudah selesai ({won} closing, {lost} batal).
           Lead yang masih berjalan tidak ikut, supaya angkanya tidak terlihat buruk hanya karena antrean panjang.
           {data?.timeToWin?.sample === 0 && ' Lama sampai closing baru mulai tercatat sejak fitur ini aktif.'}

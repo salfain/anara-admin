@@ -157,26 +157,51 @@ async function sales(req, res, next) {
     const won = `COUNT(*) FILTER (WHERE l.status = 'Sudah DP')`;
     const lost = `COUNT(*) FILTER (WHERE l.status = 'Batal')`;
 
+    // Disaring berdasarkan kapan lead-nya masuk, bukan kapan closing — supaya
+    // satu lead selalu masuk periode yang sama di setiap angka. Tanpa rentang,
+    // hasilnya sepanjang waktu.
+    const params = [];
+    const where = [];
+    if (req.query.start_date) {
+      params.push(req.query.start_date);
+      where.push(`l.entry_date >= $${params.length}::date`);
+    }
+    if (req.query.end_date) {
+      params.push(req.query.end_date);
+      where.push(`l.entry_date <= $${params.length}::date`);
+    }
+    const filter = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
     const [byPackage, byPic, funnel, speed] = await Promise.all([
       pool.query(
         `SELECT COALESCE(p.name, 'Tanpa paket') AS label,
                 COUNT(*)::int AS leads, ${won}::int AS won, ${lost}::int AS lost
          FROM leads l LEFT JOIN packages p ON p.id = l.package_id
-         GROUP BY 1 ORDER BY leads DESC LIMIT 10`
+         ${filter}
+         GROUP BY 1 ORDER BY leads DESC LIMIT 10`,
+        params
       ),
       pool.query(
-        `SELECT COALESCE(l.pic_sales, 'Tanpa PIC') AS label,
+        // Nama akun didahulukan supaya "Dita", "dita", dan "Dita " menyatu jadi
+        // satu baris. Yang tidak tertaut ke akun tetap tampil apa adanya.
+        `SELECT COALESCE(u.name, l.pic_sales, 'Tanpa PIC') AS label,
                 COUNT(*)::int AS leads, ${won}::int AS won, ${lost}::int AS lost
-         FROM leads l GROUP BY 1 ORDER BY leads DESC LIMIT 10`
+         FROM leads l LEFT JOIN users u ON u.id = l.pic_user_id
+         ${filter} GROUP BY 1 ORDER BY leads DESC LIMIT 10`,
+        params
       ),
-      pool.query(`SELECT status AS label, COUNT(*)::int AS count FROM leads GROUP BY 1`),
+      pool.query(
+        `SELECT l.status AS label, COUNT(*)::int AS count FROM leads l ${filter} GROUP BY 1`,
+        params
+      ),
       // won_at baru ada sejak fitur ini, jadi lead lama tidak punya tanggalnya.
       // Yang dihitung hanya yang punya, dan jumlahnya ikut dikirim supaya
       // angkanya bisa dinilai — rata-rata dari dua lead bukan kesimpulan.
       pool.query(
         `SELECT COUNT(*)::int AS sample,
-                ROUND(AVG(won_at::date - entry_date))::int AS avg_days
-         FROM leads WHERE won_at IS NOT NULL`
+                ROUND(AVG(l.won_at::date - l.entry_date))::int AS avg_days
+         FROM leads l ${filter ? `${filter} AND` : 'WHERE'} l.won_at IS NOT NULL`,
+        params
       ),
     ]);
 

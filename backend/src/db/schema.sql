@@ -159,6 +159,22 @@ CREATE TABLE IF NOT EXISTS leads (
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS package_id INT REFERENCES packages(id) ON DELETE SET NULL;
 
+-- PIC sebagai akun, bukan sekadar teks. Selama pic_sales cuma diketik,
+-- "Dita", "dita", dan "Dita " jadi tiga orang berbeda saat dihitung — dan
+-- itu langsung merusak angka konversi per PIC.
+-- pic_sales tetap disimpan: ada nama yang tidak cocok dengan akun mana pun,
+-- dan membuangnya berarti kehilangan data.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS pic_user_id INT REFERENCES users(id) ON DELETE SET NULL;
+
+-- Backfill sekali: cocokkan nama yang sudah terlanjur diketik ke akun yang ada,
+-- tanpa peduli besar-kecil huruf atau spasi berlebih.
+UPDATE leads l
+SET pic_user_id = u.id
+FROM users u
+WHERE l.pic_user_id IS NULL
+  AND l.pic_sales IS NOT NULL
+  AND lower(btrim(l.pic_sales)) = lower(btrim(u.name));
+
 -- Kapan lead berubah jadi "Sudah DP". Tanpa ini, lama waktu sampai closing
 -- hanya bisa ditebak dari updated_at, yang ikut berubah setiap kali baris
 -- disunting — angkanya akan terlihat meyakinkan padahal salah.
@@ -166,6 +182,7 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_at TIMESTAMP;
 
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
 CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
+CREATE INDEX IF NOT EXISTS idx_leads_pic_user ON leads(pic_user_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
 CREATE INDEX IF NOT EXISTS idx_quick_replies_category ON quick_replies(category);

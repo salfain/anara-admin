@@ -13,12 +13,26 @@ const CLOSED_STATUSES = ['Sudah DP', 'Batal'];
 // Satu-satunya status yang berarti berhasil.
 const WON_STATUS = 'Sudah DP';
 
+// Nama PIC yang diketik dicocokkan ke akun saat disimpan, supaya salah ketik
+// tidak beranak jadi "PIC" baru di laporan konversi.
+async function resolvePicUserId(picSales, client = pool) {
+  if (!picSales || !String(picSales).trim()) return null;
+  const result = await client.query(
+    'SELECT id FROM users WHERE lower(btrim(name)) = lower(btrim($1)) LIMIT 1',
+    [String(picSales)]
+  );
+  return result.rows[0]?.id || null;
+}
+
 function serialize(row) {
   return {
     id: row.id,
     entryDate: row.entry_date,
     whatsapp: row.whatsapp,
-    picSales: row.pic_sales,
+    // Kalau sudah tertaut ke akun, nama akun itu yang dipakai — nama akun bisa
+    // diperbaiki, teks yang terlanjur diketik tidak.
+    picSales: row.pic_user_name || row.pic_sales,
+    picUserId: row.pic_user_id,
     status: row.status,
     notes: row.notes,
     followUp1: row.follow_up_1,
@@ -42,8 +56,11 @@ function serialize(row) {
 async function list(req, res, next) {
   try {
     const result = await pool.query(
-      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
-       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
+              u.name AS pic_user_name
+       FROM leads l
+       LEFT JOIN packages p ON p.id = l.package_id
+       LEFT JOIN users u ON u.id = l.pic_user_id
        ORDER BY l.entry_date DESC, l.id DESC`
     );
     res.json({ data: result.rows.map(serialize) });
@@ -70,8 +87,8 @@ async function create(req, res, next) {
     const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, pic_user_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         entryDate,
@@ -85,14 +102,18 @@ async function create(req, res, next) {
         country || null,
         name || null,
         packageId || null,
+        await resolvePicUserId(picSales),
         req.user.id,
       ]
     );
 
     // Sama seperti update: baca ulang lewat join agar detail paket ikut terbawa.
     const withPackage = await pool.query(
-      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
-       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
+              u.name AS pic_user_name
+       FROM leads l
+       LEFT JOIN packages p ON p.id = l.package_id
+       LEFT JOIN users u ON u.id = l.pic_user_id
        WHERE l.id = $1`,
       [result.rows[0].id]
     );
@@ -129,8 +150,8 @@ async function update(req, res, next) {
       `UPDATE leads
        SET entry_date = $1, whatsapp = $2, pic_sales = $3, status = $4, notes = $5,
            follow_up_1 = $6, follow_up_2 = $7, follow_up_3 = $8, country = $9,
-           name = $10, package_id = $11, won_at = $12, updated_at = NOW()
-       WHERE id = $13
+           name = $10, package_id = $11, won_at = $12, pic_user_id = $13, updated_at = NOW()
+       WHERE id = $14
        RETURNING *`,
       [
         entryDate,
@@ -145,14 +166,18 @@ async function update(req, res, next) {
         name || null,
         packageId || null,
         wonAt,
+        await resolvePicUserId(picSales),
         req.params.id,
       ]
     );
 
     // Baca ulang lewat join supaya respons membawa detail paket seperti list().
     const withPackage = await pool.query(
-      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price
-       FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+      `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
+              u.name AS pic_user_name
+       FROM leads l
+       LEFT JOIN packages p ON p.id = l.package_id
+       LEFT JOIN users u ON u.id = l.pic_user_id
        WHERE l.id = $1`,
       [req.params.id]
     );
@@ -197,8 +222,8 @@ async function bulkCreate(req, res, next) {
         ? packageByName.get(String(packageName).trim().toLowerCase()) || null
         : null;
       const result = await client.query(
-        `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, pic_user_id, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          RETURNING id`,
         [
           entryDate,
@@ -212,6 +237,7 @@ async function bulkCreate(req, res, next) {
           country || null,
           name || null,
           packageId,
+          await resolvePicUserId(picSales, client),
           req.user.id,
         ]
       );

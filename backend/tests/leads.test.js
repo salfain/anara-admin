@@ -277,3 +277,57 @@ test('the closing date is stamped once and not moved by later edits', async () =
   })).json()).data;
   assert.equal(reopened.wonAt, null, 'status dicabut, tanggalnya ikut dicabut');
 });
+
+test('typos in the PIC name no longer split the conversion table', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query(`INSERT INTO users (id, email, name, role, status)
+                    VALUES (9, 'dita@t.id', 'Dita', 'cs', 'active') ON CONFLICT DO NOTHING`);
+
+  // Ditulis tiga cara berbeda — dulu jadi tiga baris terpisah di laporan.
+  for (const [pic, status] of [['Dita', 'Sudah DP'], ['dita', 'Batal'], ['  DITA  ', 'Sudah DP']]) {
+    await fetch(`${base}/leads`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628', picSales: pic }),
+    }).then((r) => r.json()).then(({ data }) =>
+      fetch(`${base}/leads/${data.id}`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ ...toPayload(data), picSales: pic, status }),
+      })
+    );
+  }
+
+  const { data } = await (await fetch(`${base}/analytics/sales`, { headers })).json();
+  const dita = data.byPic.filter((r) => r.label === 'Dita');
+  assert.equal(dita.length, 1, 'ketiganya harus menyatu jadi satu baris');
+  assert.equal(dita[0].leads, 3);
+  assert.equal(dita[0].conversion, 67);
+});
+
+test('a PIC who has no account is still counted, under the name typed', async () => {
+  await pool.query('DELETE FROM leads');
+  await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628', picSales: 'Freelancer Luar' }),
+  });
+  const { data } = await (await fetch(`${base}/analytics/sales`, { headers })).json();
+  assert.equal(data.byPic[0].label, 'Freelancer Luar');
+});
+
+test('the sales range filters by when the lead arrived', async () => {
+  await pool.query('DELETE FROM leads');
+  for (const [tanggal, status] of [['2026-06-15', 'Sudah DP'], ['2026-08-20', 'Batal']]) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status) VALUES ($1, '628', 'Sari', $2)`,
+      [tanggal, status]
+    );
+  }
+
+  const semua = await (await fetch(`${base}/analytics/sales`, { headers })).json();
+  assert.equal(semua.data.byPic[0].leads, 2);
+
+  const agustus = await (await fetch(
+    `${base}/analytics/sales?start_date=2026-08-01&end_date=2026-08-31`, { headers }
+  )).json();
+  assert.equal(agustus.data.byPic[0].leads, 1);
+  assert.equal(agustus.data.byPic[0].won, 0, 'closing bulan Juni tidak boleh ikut');
+});

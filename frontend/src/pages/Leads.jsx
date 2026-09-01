@@ -123,7 +123,7 @@ export default function Leads() {
 
   useEffect(() => {
     api.get('/users/simple')
-      .then(({ data }) => setPicOptions(data.data.filter((u) => u.role === 'cs').map((u) => u.name)))
+      .then(({ data }) => setPicOptions(data.data.map((u) => u.name)))
       .catch(() => {});
     api.get('/packages')
       .then(({ data }) => {
@@ -151,6 +151,17 @@ export default function Leads() {
         .filter(Boolean).join(' ').toLowerCase().includes(q);
     });
   }, [leads, search, statusFilter, picFilter, monthFilter, fuFilter]);
+
+  // Nama PIC yang sudah terlanjur ada tapi tidak punya akun tetap dipertahankan
+  // sebagai pilihan, supaya menyunting kolom lain tidak diam-diam menghapusnya.
+  const picSelectOptions = useCallback(
+    (current) => {
+      const names = [...picOptions];
+      if (current && !names.includes(current)) names.unshift(current);
+      return ['', ...names].map((n) => ({ value: n, label: n || '— tanpa PIC —' }));
+    },
+    [picOptions]
+  );
 
   const packageOptions = useMemo(
     () => [{ value: '', label: '— tanpa paket —' }, ...packages.map((p) => ({ value: String(p.id), label: p.name }))],
@@ -604,7 +615,7 @@ export default function Leads() {
                   {cell('name', { className: 'text-gray-dark', display: l.name || '-', placeholder: 'Nama customer' })}
                   {cell('whatsapp', { className: 'text-gray-dark font-medium', display: l.whatsapp })}
                   {cell('picSales', {
-                    type: 'combo', options: picFilterOptions, listId: `pic-${l.id}`,
+                    type: 'select', options: picSelectOptions(l.picSales),
                     className: 'text-secondary', display: l.picSales || '-',
                   })}
                   {cell('status', {
@@ -657,7 +668,7 @@ export default function Leads() {
             })}
             {!loading && canManage && (
               <NewLeadRow
-                picOptions={picFilterOptions}
+                picOptions={picOptions}
                 countryOptions={countryOptions}
                 packageOptions={packageOptions}
                 onCreate={handleInlineCreate}
@@ -783,8 +794,10 @@ function NewLeadRow({ picOptions, countryOptions, packageOptions, onCreate, onEr
         />
       </td>
       <td className="px-1 py-1">
-        <input value={row.picSales} onChange={set('picSales')} onKeyDown={onKeyDown} list="new-lead-pic" placeholder="PIC" className={input} />
-        <datalist id="new-lead-pic">{picOptions.map((o) => <option key={o} value={o} />)}</datalist>
+        <select value={row.picSales} onChange={set('picSales')} onKeyDown={onKeyDown} className={input}>
+          <option value="">PIC…</option>
+          {picOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
       </td>
       <td className="px-1 py-1">
         <select value={row.status} onChange={set('status')} onKeyDown={onKeyDown} className={input}>
