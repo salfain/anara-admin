@@ -475,3 +475,62 @@ test('someone with no leads assigned is not shown an empty personal queue', asyn
   assert.equal(data.followUp.mineTotal, 0);
   assert.equal(data.followUp.due, 1);
 });
+
+test('the follow-up date comes from the chosen departure, not the package blob', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query('DELETE FROM packages');
+  const pkg = (await pool.query(
+    `INSERT INTO packages (name, dates) VALUES ('Korea', '12-19 Okt / 24-31 Okt / 5-12 Nov') RETURNING id`
+  )).rows[0].id;
+  const dep = (await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date) VALUES ($1, '2026-10-24') RETURNING id`,
+    [pkg]
+  )).rows[0].id;
+
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628', departureId: dep }),
+  })).json()).data;
+
+  // Inti perubahannya: pesan follow-up menyebut satu tanggal yang ditanyakan,
+  // bukan seluruh daftar tanggal paket itu.
+  assert.equal(lead.packageDates, '2026-10-24');
+  assert.equal(lead.departureId, dep);
+  // Paketnya ikut dari keberangkatan, tanpa perlu dikirim terpisah.
+  assert.equal(lead.packageId, pkg);
+  assert.equal(lead.packageName, 'Korea');
+});
+
+test('without a departure it still falls back to the package text', async () => {
+  await pool.query('DELETE FROM leads');
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628', packageId: pkg }),
+  })).json()).data;
+
+  // Customer sering menanyakan paket sebelum menyebut tanggal — itu bukan
+  // kesalahan, jadi tidak dikosongkan.
+  assert.equal(lead.packageDates, '12-19 Okt / 24-31 Okt / 5-12 Nov');
+  assert.equal(lead.departureId, null);
+});
+
+test('a lead keeps its package when the departure is deleted', async () => {
+  await pool.query('DELETE FROM leads');
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const dep = (await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date) VALUES ($1, '2026-12-01') RETURNING id`,
+    [pkg]
+  )).rows[0].id;
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628', departureId: dep }),
+  })).json()).data;
+
+  await pool.query('DELETE FROM package_departures WHERE id = $1', [dep]);
+
+  const list = await (await fetch(`${base}/leads`, { headers })).json();
+  const setelah = list.data.find((l) => l.id === lead.id);
+  assert.equal(setelah.departureId, null, 'tanggalnya lepas');
+  assert.equal(setelah.packageId, pkg, 'tapi paketnya tetap — lead tidak kehilangan konteks');
+});

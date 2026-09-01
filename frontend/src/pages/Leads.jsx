@@ -42,7 +42,7 @@ const STATUS_STYLE = {
 // Kolom yang bisa disunting langsung di tabel, berurutan sesuai tampilan —
 // urutan ini juga yang dipakai tombol Tab untuk berpindah antar sel.
 const EDITABLE_FIELDS = [
-  'entryDate', 'name', 'whatsapp', 'picSales', 'status', 'packageId', 'country',
+  'entryDate', 'name', 'whatsapp', 'picSales', 'status', 'paketPilihan', 'country',
   'followUp1', 'followUp2', 'followUp3', 'notes',
 ];
 
@@ -74,6 +74,21 @@ function toInputDate(value) {
 
 // PUT /leads/:id mengganti seluruh baris, jadi sunting satu sel tetap
 // mengirim baris utuh dengan satu kolom yang berubah.
+// Sel Paket menyimpan salah satu dari dua hal, jadi nilainya diberi awalan.
+/** Mengurai nilai dropdown gabungan jadi dua kolom yang disimpan. */
+function pilihanKePayload(nilai) {
+  if (!nilai) return { packageId: null, departureId: null };
+  const [jenis, id] = nilai.split(':');
+  if (jenis === 'd') return { departureId: Number(id), packageId: null };
+  return { packageId: Number(id), departureId: null };
+}
+
+function paketPilihanValue(lead) {
+  if (lead.departureId) return `d:${lead.departureId}`;
+  if (lead.packageId) return `p:${lead.packageId}`;
+  return '';
+}
+
 function toPayload(lead) {
   return {
     entryDate: toInputDate(lead.entryDate),
@@ -87,6 +102,7 @@ function toPayload(lead) {
     country: lead.country || null,
     name: lead.name || null,
     packageId: lead.packageId || null,
+    departureId: lead.departureId || null,
   };
 }
 
@@ -132,6 +148,7 @@ export default function Leads() {
   const [picOptions, setPicOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [departures, setDepartures] = useState([]);
   const [sendTarget, setSendTarget] = useState(null);
   const [marking, setMarking] = useState(false);
   const [sort, setSort] = useState({ field: 'entryDate', dir: 'desc' });
@@ -157,6 +174,9 @@ export default function Leads() {
   useEffect(() => {
     api.get('/users/simple')
       .then(({ data }) => setPicOptions(data.data.map((u) => u.name)))
+      .catch(() => {});
+    api.get('/departures')
+      .then(({ data }) => setDepartures(data.data))
       .catch(() => {});
     api.get('/packages')
       .then(({ data }) => {
@@ -197,10 +217,18 @@ export default function Leads() {
     [picOptions]
   );
 
-  const packageOptions = useMemo(
-    () => [{ value: '', label: '— tanpa paket —' }, ...packages.map((p) => ({ value: String(p.id), label: p.name }))],
-    [packages]
-  );
+  const packageOptions = useMemo(() => {
+    const opsi = [{ value: '', label: '— tanpa paket —' }];
+    for (const p of packages) {
+      // Paket saja tetap ada: customer sering menanyakan paketnya dulu,
+      // sebelum menyebut tanggal.
+      opsi.push({ value: `p:${p.id}`, label: p.name });
+      for (const d of departures.filter((d) => d.packageId === p.id)) {
+        opsi.push({ value: `d:${d.id}`, label: `   ${p.name} — ${fmtDate(d.departDate)}` });
+      }
+    }
+    return opsi;
+  }, [packages, departures]);
 
   const sorted = useMemo(() => sortLeads(filtered, sort), [filtered, sort]);
 
@@ -296,7 +324,7 @@ export default function Leads() {
       const payload = {
         entryDate: form.entryDate,
         name: form.name.trim() || null,
-        packageId: form.packageId ? Number(form.packageId) : null,
+        ...pilihanKePayload(form.packageId),
         whatsapp: form.whatsapp.trim(),
         picSales: form.picSales.trim() || null,
         status: form.status,
@@ -331,7 +359,9 @@ export default function Leads() {
 
   async function commitCell(lead, field, rawValue, opts) {
     const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
-    const current = DATE_FIELDS.has(field) ? toInputDate(lead[field]) : String(lead[field] ?? '');
+    const current = field === 'paketPilihan'
+      ? paketPilihanValue(lead)
+      : DATE_FIELDS.has(field) ? toInputDate(lead[field]) : String(lead[field] ?? '');
 
     if (value === current) {
       setEditingCell(null);
@@ -341,22 +371,27 @@ export default function Leads() {
     if (field === 'entryDate' && !value) return push('Tanggal masuk wajib diisi', 'error');
     if (field === 'whatsapp' && !value) return push('Nomor WhatsApp wajib diisi', 'error');
 
-    // Paket disimpan sebagai id; <select> selalu memberi string.
-    const parsed = field === 'packageId' ? (value ? Number(value) : null) : value || null;
-    const chosen = field === 'packageId' ? packages.find((p) => p.id === parsed) : null;
-    const updated = {
-      ...lead,
-      [field]: parsed,
-      ...(field === 'packageId'
-        ? {
-            packageName: chosen?.name || null,
-            packageDates: chosen?.dates || null,
-            packagePrice: chosen?.price ?? null,
-            // Destinasi ikut paket kalau lead-nya belum punya.
-            country: lead.country || chosen?.destination || null,
-          }
-        : {}),
-    };
+    let updated;
+    if (field === 'paketPilihan') {
+      // "d:12" berarti satu keberangkatan, "p:3" berarti paketnya saja.
+      const [jenis, id] = value ? value.split(':') : ['', ''];
+      const dep = jenis === 'd' ? departures.find((d) => d.id === Number(id)) : null;
+      const pkgId = dep ? dep.packageId : jenis === 'p' ? Number(id) : null;
+      const pkg = packages.find((p) => p.id === pkgId);
+      updated = {
+        ...lead,
+        packageId: pkgId,
+        departureId: dep?.id || null,
+        departureDate: dep?.departDate || null,
+        packageName: pkg?.name || null,
+        packageDates: dep?.departDate || pkg?.dates || null,
+        packagePrice: pkg?.price ?? null,
+        // Destinasi ikut paket kalau lead-nya belum punya.
+        country: lead.country || pkg?.destination || null,
+      };
+    } else {
+      updated = { ...lead, [field]: value || null };
+    }
     setEditingCell(null);
     opts?.then?.();
     // Show the new value straight away; the request is a formality the user
@@ -380,7 +415,7 @@ export default function Leads() {
     const payload = {
       entryDate: row.entryDate,
       name: row.name.trim() || null,
-      packageId: row.packageId ? Number(row.packageId) : null,
+      ...pilihanKePayload(row.paketPilihan),
       whatsapp: row.whatsapp.trim(),
       picSales: row.picSales.trim() || null,
       status: row.status,
@@ -669,7 +704,13 @@ export default function Leads() {
               const cell = (field, props) => (
                 <EditableCell
                   {...props}
-                  value={DATE_FIELDS.has(field) ? toInputDate(l[field]) : (l[field] ?? '') === '' ? '' : String(l[field])}
+                  value={
+                    field === 'paketPilihan'
+                      ? paketPilihanValue(l)
+                      : DATE_FIELDS.has(field)
+                        ? toInputDate(l[field])
+                        : (l[field] ?? '') === '' ? '' : String(l[field])
+                  }
                   editing={editingCell?.id === l.id && editingCell?.field === field}
                   disabled={!canManage}
                   onStartEdit={() => setEditingCell({ id: l.id, field })}
@@ -721,9 +762,12 @@ export default function Leads() {
                       </span>
                     ),
                   })}
-                  {cell('packageId', {
+                  {cell('paketPilihan', {
                     type: 'select', options: packageOptions,
-                    className: 'text-secondary', display: l.packageName || '-',
+                    className: 'text-secondary',
+                    display: l.packageName
+                      ? `${l.packageName}${l.departureDate ? ` · ${fmtDate(l.departureDate)}` : ''}`
+                      : '-',
                   })}
                   {cell('country', {
                     type: 'combo', options: countryOptions, listId: `country-${l.id}`,
@@ -824,7 +868,7 @@ function NewLeadRow({ picOptions, countryOptions, packageOptions, onCreate, onEr
   const EMPTY = {
     entryDate: new Date().toISOString().slice(0, 10),
     name: '',
-    packageId: '',
+    paketPilihan: '',
     whatsapp: '',
     picSales: '',
     status: 'Baru',
@@ -897,7 +941,7 @@ function NewLeadRow({ picOptions, countryOptions, packageOptions, onCreate, onEr
         </select>
       </td>
       <td className="px-1 py-1">
-        <select value={row.packageId} onChange={set('packageId')} onKeyDown={onKeyDown} className={input}>
+        <select value={row.paketPilihan} onChange={set('paketPilihan')} onKeyDown={onKeyDown} className={input}>
           {packageOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </td>

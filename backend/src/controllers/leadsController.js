@@ -15,6 +15,16 @@ const WON_STATUS = 'Sudah DP';
 
 // Nama PIC yang diketik dicocokkan ke akun saat disimpan, supaya salah ketik
 // tidak beranak jadi "PIC" baru di laporan konversi.
+/**
+ * Memilih keberangkatan sudah menentukan paketnya. Membiarkan keduanya diisi
+ * terpisah membuka peluang lead menunjuk paket A tapi tanggal milik paket B.
+ */
+async function resolvePackageForDeparture(departureId, fallbackPackageId, client = pool) {
+  if (!departureId) return fallbackPackageId || null;
+  const { rows } = await client.query('SELECT package_id FROM package_departures WHERE id = $1', [departureId]);
+  return rows[0]?.package_id || fallbackPackageId || null;
+}
+
 async function resolvePicUserId(picSales, client = pool) {
   if (!picSales || !String(picSales).trim()) return null;
   const result = await client.query(
@@ -43,7 +53,11 @@ function serialize(row) {
     packageId: row.package_id,
     // Ikut dikirim supaya pesan follow-up bisa terisi tanpa request tambahan.
     packageName: row.package_name || null,
-    packageDates: row.package_dates || null,
+    departureId: row.departure_id,
+    departureDate: row.departure_date || null,
+    // Tanggal yang dipakai pesan follow-up: keberangkatan yang dipilih kalau
+    // ada, dan baru jatuh ke teks gabungan di paket kalau belum ada.
+    packageDates: row.departure_date || row.package_dates || null,
     packagePrice: row.package_price !== undefined && row.package_price !== null
       ? Number(row.package_price)
       : null,
@@ -57,10 +71,11 @@ async function list(req, res, next) {
   try {
     const result = await pool.query(
       `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
-              u.name AS pic_user_name
+              u.name AS pic_user_name, d.depart_date AS departure_date
        FROM leads l
        LEFT JOIN packages p ON p.id = l.package_id
        LEFT JOIN users u ON u.id = l.pic_user_id
+       LEFT JOIN package_departures d ON d.id = l.departure_id
        ORDER BY l.entry_date DESC, l.id DESC`
     );
     res.json({ data: result.rows.map(serialize) });
@@ -84,11 +99,12 @@ async function create(req, res, next) {
     const error = validatePayload(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
+    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId, departureId } = req.body;
+    const paketFinal = await resolvePackageForDeparture(departureId, packageId);
 
     const result = await pool.query(
-      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, pic_user_id, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO leads (entry_date, whatsapp, pic_sales, status, notes, follow_up_1, follow_up_2, follow_up_3, country, name, package_id, departure_id, pic_user_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         entryDate,
@@ -101,7 +117,8 @@ async function create(req, res, next) {
         followUp3 || null,
         country || null,
         name || null,
-        packageId || null,
+        paketFinal,
+        departureId || null,
         await resolvePicUserId(picSales),
         req.user.id,
       ]
@@ -110,10 +127,11 @@ async function create(req, res, next) {
     // Sama seperti update: baca ulang lewat join agar detail paket ikut terbawa.
     const withPackage = await pool.query(
       `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
-              u.name AS pic_user_name
+              u.name AS pic_user_name, d.depart_date AS departure_date
        FROM leads l
        LEFT JOIN packages p ON p.id = l.package_id
        LEFT JOIN users u ON u.id = l.pic_user_id
+       LEFT JOIN package_departures d ON d.id = l.departure_id
        WHERE l.id = $1`,
       [result.rows[0].id]
     );
@@ -137,7 +155,8 @@ async function update(req, res, next) {
     const error = validatePayload(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId } = req.body;
+    const { entryDate, whatsapp, picSales, status, notes, followUp1, followUp2, followUp3, country, name, packageId, departureId } = req.body;
+    const paketFinal = await resolvePackageForDeparture(departureId, packageId);
 
     // Dicatat sekali saat pertama kali jadi "Sudah DP", dan dikosongkan lagi
     // kalau statusnya dicabut. Menulis ulang tiap update akan menggeser tanggal
@@ -150,8 +169,9 @@ async function update(req, res, next) {
       `UPDATE leads
        SET entry_date = $1, whatsapp = $2, pic_sales = $3, status = $4, notes = $5,
            follow_up_1 = $6, follow_up_2 = $7, follow_up_3 = $8, country = $9,
-           name = $10, package_id = $11, won_at = $12, pic_user_id = $13, updated_at = NOW()
-       WHERE id = $14
+           name = $10, package_id = $11, won_at = $12, pic_user_id = $13,
+           departure_id = $14, updated_at = NOW()
+       WHERE id = $15
        RETURNING *`,
       [
         entryDate,
@@ -164,9 +184,10 @@ async function update(req, res, next) {
         followUp3 || null,
         country || null,
         name || null,
-        packageId || null,
+        paketFinal,
         wonAt,
         await resolvePicUserId(picSales),
+        departureId || null,
         req.params.id,
       ]
     );
@@ -174,10 +195,11 @@ async function update(req, res, next) {
     // Baca ulang lewat join supaya respons membawa detail paket seperti list().
     const withPackage = await pool.query(
       `SELECT l.*, p.name AS package_name, p.dates AS package_dates, p.price AS package_price,
-              u.name AS pic_user_name
+              u.name AS pic_user_name, d.depart_date AS departure_date
        FROM leads l
        LEFT JOIN packages p ON p.id = l.package_id
        LEFT JOIN users u ON u.id = l.pic_user_id
+       LEFT JOIN package_departures d ON d.id = l.departure_id
        WHERE l.id = $1`,
       [req.params.id]
     );

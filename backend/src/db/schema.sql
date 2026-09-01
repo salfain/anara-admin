@@ -274,6 +274,11 @@ CREATE INDEX IF NOT EXISTS idx_participants_booking ON booking_participants(book
 
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
 CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
+-- Keberangkatan yang diminati, kalau customer sudah menyebut tanggal.
+-- Tanpa ini pesan follow-up menyebut packages.dates — teks gabungan berisi
+-- semua tanggal sekaligus, bukan tanggal yang sedang ditanyakan.
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS departure_id INT REFERENCES package_departures(id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_leads_pic_user ON leads(pic_user_id);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 

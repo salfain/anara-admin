@@ -35,7 +35,9 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
       setForm({
         entryDate: toInputDate(initial.entryDate),
         name: initial.name || '',
-        packageId: initial.packageId ? String(initial.packageId) : '',
+        packageId: initial.departureId
+          ? `d:${initial.departureId}`
+          : initial.packageId ? `p:${initial.packageId}` : '',
         whatsapp: initial.whatsapp || '',
         picSales: initial.picSales || '',
         status: initial.status || 'Baru',
@@ -105,7 +107,7 @@ export default function LeadModal({ open, onClose, onSubmit, initial, saving, pi
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Paket Diminati</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Paket / Keberangkatan</label>
             <select
               value={form.packageId}
               onChange={(e) => set('packageId', e.target.value)}
