@@ -16,6 +16,12 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+// Tanpa CORS_ORIGIN, API terbuka untuk semua situs. Token disimpan di
+// localStorage dan tidak ikut terkirim otomatis lintas situs, jadi dampaknya
+// terbatas — tapi tidak ada alasan membiarkannya terbuka.
+if (!process.env.CORS_ORIGIN) {
+  console.warn('[PERINGATAN] CORS_ORIGIN belum diisi — API menerima permintaan dari semua asal.');
+}
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 

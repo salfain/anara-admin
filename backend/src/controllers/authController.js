@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const pool = require('../db/pool');
 const { loadPermissions } = require('../middleware/auth');
+const { recordFailedLogin, clearLoginAttempts } = require('../middleware/loginLimiter');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -80,11 +81,15 @@ async function login(req, res, next) {
 
     const user = await findUserWithRole('u.email = $1', [email]);
     if (!user || !user.password_hash) {
+      // Email yang tidak terdaftar ikut dihitung — kalau tidak, lamanya respons
+      // sendiri sudah memberi tahu email mana yang ada.
+      recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
+      recordFailedLogin(email);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -92,6 +97,7 @@ async function login(req, res, next) {
       return res.status(403).json({ error: 'Akun Anda masih menunggu persetujuan admin.' });
     }
 
+    clearLoginAttempts(email);
     const token = signToken(user);
     res.json({ token, user: sanitizeUser(user, await userPermissions(user)) });
   } catch (err) {

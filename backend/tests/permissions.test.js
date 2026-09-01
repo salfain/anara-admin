@@ -159,3 +159,46 @@ test('managing permissions does not let you widen your own role', async () => {
     200
   );
 });
+
+test('repeated password guesses on one account get shut off', async () => {
+  const bcrypt = require('bcryptjs');
+  await pool.query(
+    `INSERT INTO users (id, email, password_hash, name, role, status)
+     VALUES (50, 'target@test.id', $1, 'Target', 'cs', 'active')
+     ON CONFLICT (id) DO NOTHING`,
+    [await bcrypt.hash('rahasia-betul', 4)]
+  );
+
+  const coba = (password) =>
+    fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'target@test.id', password }),
+    });
+
+  // Sepuluh tebakan pertama ditolak sebagai salah password.
+  for (let i = 0; i < 10; i++) {
+    assert.equal((await coba(`tebakan-${i}`)).status, 401);
+  }
+
+  // Yang kesebelas tidak lagi sampai ke pengecekan password.
+  const ditahan = await coba('tebakan-lagi');
+  assert.equal(ditahan.status, 429);
+  assert.match((await ditahan.json()).error, /Terlalu banyak/);
+
+  // Password yang benar pun ikut tertahan selama jendela itu — memang begitu
+  // yang diharapkan, kalau tidak batasannya bisa dipakai untuk menebak.
+  assert.equal((await coba('rahasia-betul')).status, 429);
+});
+
+test('unexpected failures do not describe the database to the caller', async () => {
+  // Meniru error yang benar-benar terjadi: migrasi terlewat, query menabrak
+  // kolom yang belum ada, dan pesannya sampai ke browser.
+  const res = await call(token(USERS.boss), 'PUT', '/leads/bukan-angka', {
+    entryDate: '2026-08-01',
+    whatsapp: '628',
+  });
+  assert.equal(res.status, 500);
+  const { error } = await res.json();
+  assert.doesNotMatch(error, /column|relation|syntax|integer/i, 'jangan sebut bentuk database');
+});
