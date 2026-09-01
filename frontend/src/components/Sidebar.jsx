@@ -8,6 +8,7 @@ import InstallPwaButton from './InstallPwaButton';
 import AnaraLogo from './AnaraLogo';
 import { canSeeNavItem } from '../hooks/usePermissions';
 import useFollowUpStore from '../store/followUpStore';
+import { badgeCounts } from '../utils/followUpBadge';
 
 function Tooltip({ label, show }) {
   if (!show) return null;
@@ -22,8 +23,15 @@ export default function Sidebar() {
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const { collapsed, toggleCollapsed } = useSidebarStore();
-  const dueCount = useFollowUpStore((s) => s.due);
-  const overdueCount = useFollowUpStore((s) => s.overdue);
+  const badge = badgeCounts({
+    due: useFollowUpStore((s) => s.due),
+    overdue: useFollowUpStore((s) => s.overdue),
+    mineDue: useFollowUpStore((s) => s.mineDue),
+    mineOverdue: useFollowUpStore((s) => s.mineOverdue),
+    mineTotal: useFollowUpStore((s) => s.mineTotal),
+  });
+  const dueCount = badge.due;
+  const overdueCount = badge.overdue;
   const initials = (user?.name || '?')
     .split(' ')
     .map((p) => p[0])
@@ -55,7 +63,9 @@ export default function Sidebar() {
           return (
             <div key={item.to} className="relative group">
               <NavLink
-                to={item.to}
+                to={item.to === '/leads' && dueCount > 0
+                  ? `/leads?fu=due${badge.personal ? '&mine=1' : ''}`
+                  : item.to}
                 end={item.end}
                 className={({ isActive }) =>
                   `flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0 ${
@@ -70,7 +80,7 @@ export default function Sidebar() {
                   <span
                     className={`text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shrink-0 ${collapsed ? 'absolute top-1 right-1' : 'ml-auto'}`}
                     style={{ background: overdueCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff' }}
-                    title={`${dueCount} lead perlu di-follow-up`}
+                    title={`${dueCount} lead ${badge.personal ? 'milikmu ' : ''}perlu di-follow-up`}
                   >
                     {dueCount > 99 ? '99+' : dueCount}
                   </span>

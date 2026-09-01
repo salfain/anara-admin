@@ -431,3 +431,47 @@ test('deleting a lead takes its history with it', async () => {
   const sisa = await pool.query('SELECT count(*)::int AS n FROM lead_notes');
   assert.equal(sisa.rows[0].n, 0, 'jangan tinggalkan catatan yatim');
 });
+
+test('the reminder separates my queue from the team queue', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query(`INSERT INTO users (id, email, name, role, status)
+                    VALUES (60, 'rekan@t.id', 'Rekan', 'cs', 'active') ON CONFLICT DO NOTHING`);
+
+  const lama = new Date();
+  lama.setDate(lama.getDate() - 10);
+  const tanggalLama = lama.toISOString().slice(0, 10);
+
+  // Dua menganggur milik saya (user 1), satu milik rekan, satu masih segar.
+  const rows = [
+    [1, tanggalLama], [1, tanggalLama], [60, tanggalLama],
+    [1, new Date().toISOString().slice(0, 10)],
+  ];
+  for (const [pic, tanggal] of rows) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, pic_user_id, status) VALUES ($1, '628', $2, 'Nego')`,
+      [tanggal, pic]
+    );
+  }
+
+  const { data } = await (await fetch(`${base}/leads/summary`, { headers })).json();
+  assert.equal(data.followUp.due, 3, 'seluruh tim');
+  assert.equal(data.followUp.mineDue, 2, 'hanya milik saya');
+  assert.equal(data.followUp.mineOverdue, 2);
+  assert.equal(data.followUp.mineTotal, 3, 'termasuk yang belum jatuh tempo');
+});
+
+test('someone with no leads assigned is not shown an empty personal queue', async () => {
+  await pool.query('DELETE FROM leads');
+  const lama = new Date();
+  lama.setDate(lama.getDate() - 10);
+  await pool.query(
+    `INSERT INTO leads (entry_date, whatsapp, pic_user_id, status) VALUES ($1, '628', 60, 'Nego')`,
+    [lama.toISOString().slice(0, 10)]
+  );
+
+  const { data } = await (await fetch(`${base}/leads/summary`, { headers })).json();
+  // mineTotal nol membedakan "bukan urusan saya" dari "punya, sudah beres" —
+  // manajer tetap harus melihat angka tim.
+  assert.equal(data.followUp.mineTotal, 0);
+  assert.equal(data.followUp.due, 1);
+});

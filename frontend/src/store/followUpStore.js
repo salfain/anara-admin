@@ -9,18 +9,26 @@ import api from '../api/client';
  * menghitungnya untuk Dashboard — jadi tidak perlu memuat seluruh lead hanya
  * untuk menampilkan satu angka.
  */
+const KOSONG = { due: 0, overdue: 0, mineDue: 0, mineOverdue: 0, mineTotal: 0 };
+
 const useFollowUpStore = create((set) => ({
-  due: 0,
-  overdue: 0,
+  ...KOSONG,
 
   refresh: async () => {
     try {
       const { data } = await api.get('/leads/summary');
-      set({ due: data.data.followUp?.due || 0, overdue: data.data.followUp?.overdue || 0 });
+      const fu = data.data.followUp || {};
+      set({
+        due: fu.due || 0,
+        overdue: fu.overdue || 0,
+        mineDue: fu.mineDue || 0,
+        mineOverdue: fu.mineOverdue || 0,
+        mineTotal: fu.mineTotal || 0,
+      });
     } catch {
       // Tidak punya hak akses leads, atau server sedang bermasalah. Lencana
       // yang hilang jauh lebih baik daripada error yang muncul di tiap halaman.
-      set({ due: 0, overdue: 0 });
+      set(KOSONG);
     }
   },
 }));

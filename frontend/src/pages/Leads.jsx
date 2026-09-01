@@ -12,6 +12,7 @@ import EditableCell from '../components/EditableCell';
 import { sortLeads } from '../utils/leadSort';
 import { toWaNumber } from '../utils/whatsapp';
 import useFollowUpStore from '../store/followUpStore';
+import useAuthStore from '../store/authStore';
 import {
   followUpState, daysSinceContact, withFollowUpToday, willShiftFollowUps,
   DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS,
@@ -101,6 +102,11 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  // Dicocokkan lewat picUserId, bukan nama — dua orang bisa bernama sama, dan
+  // nama akun bisa berubah.
+  const [mineOnly, setMineOnly] = useState(
+    () => new URLSearchParams(window.location.search).get('mine') === '1'
+  );
   const [picFilter, setPicFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
   // Dashboard menautkan ke sini dengan ?fu=due / ?fu=overdue.
@@ -117,6 +123,7 @@ export default function Leads() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const { can } = usePermissions();
   const canManage = can('leads.manage');
+  const currentUser = useAuthStore((s) => s.user);
   // Lencana di navigasi ikut disegarkan begitu ada yang mengubah antrean
   // follow-up — menunggu tick berikutnya membuat angkanya terlihat salah.
   const refreshBadge = useFollowUpStore((s) => s.refresh);
@@ -163,6 +170,7 @@ export default function Leads() {
   const filtered = useMemo(() => {
     return leads.filter((l) => {
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+      if (mineOnly && l.picUserId !== currentUser?.id) return false;
       if (picFilter !== 'all' && l.picSales !== picFilter) return false;
       if (monthFilter !== 'all' && monthKey(l.entryDate) !== monthFilter) return false;
       if (fuFilter !== 'all') {
@@ -176,7 +184,7 @@ export default function Leads() {
       return [l.whatsapp, l.name, l.picSales, l.notes, l.country, l.packageName]
         .filter(Boolean).join(' ').toLowerCase().includes(q);
     });
-  }, [leads, search, statusFilter, picFilter, monthFilter, fuFilter]);
+  }, [leads, search, statusFilter, picFilter, monthFilter, fuFilter, mineOnly, currentUser?.id]);
 
   // Nama PIC yang sudah terlanjur ada tapi tidak punya akun tetap dipertahankan
   // sebagai pilihan, supaya menyunting kolom lain tidak diam-diam menghapusnya.
@@ -503,6 +511,16 @@ export default function Leads() {
       )}
 
       <div className="flex flex-wrap gap-3">
+        <button
+          onClick={() => setMineOnly((v) => !v)}
+          title="Hanya lead yang PIC-nya kamu"
+          className="h-10 px-4 rounded-lg text-sm font-semibold cursor-pointer border shrink-0"
+          style={mineOnly
+            ? { background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)', borderColor: 'transparent' }
+            : { background: 'var(--color-surface)', color: 'var(--color-secondary)', borderColor: 'var(--color-gray-med)' }}
+        >
+          Lead saya
+        </button>
         <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
@@ -638,7 +656,9 @@ export default function Leads() {
             {loading && <SkeletonRows rows={6} cols={13} />}
             {!loading && filtered.length === 0 && (
               <tr><td colSpan={13} className="text-center text-sm text-secondary py-16">
-                {fuFilter !== 'all'
+                {mineOnly
+                  ? 'Tidak ada lead yang PIC-nya kamu pada filter ini.'
+                  : fuFilter !== 'all'
                   ? 'Tidak ada lead yang perlu di-follow-up. '
                   : search || statusFilter !== 'all' || picFilter !== 'all' || monthFilter !== 'all'
                     ? 'Tidak ada lead yang cocok.'

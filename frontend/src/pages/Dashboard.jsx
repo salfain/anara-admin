@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import useThemeStore from '../store/themeStore';
 import usePermissions from '../hooks/usePermissions';
+import { badgeCounts } from '../utils/followUpBadge';
 import Skeleton from '../components/Skeleton';
 
 const STATUS_COLORS = {
@@ -26,6 +27,7 @@ function shortMonthLabel(key) {
 export default function Dashboard() {
   const { user } = useAuthStore();
   const { can } = usePermissions();
+  const fuBadge = badgeCounts(leadsSummary?.followUp || {});
   const theme = useThemeStore((s) => s.theme);
   const tickColor = theme === 'dark' ? '#f1f5f9' : '#111827';
   const [stats, setStats] = useState(null);
@@ -99,14 +101,14 @@ export default function Dashboard() {
             Lihat Analytics
           </Link>
         )}
-        {leadsSummary?.followUp?.due > 0 && (
+        {fuBadge.due > 0 && (
           <Link
-            to="/leads?fu=due"
+            to={`/leads?fu=due${fuBadge.personal ? '&mine=1' : ''}`}
             className="h-10 px-4 rounded-full btn-3d text-[13px] font-semibold flex items-center gap-2 cursor-pointer text-white"
-            style={{ background: leadsSummary.followUp.overdue > 0 ? '#ef4444' : '#f59e0b' }}
+            style={{ background: fuBadge.overdue > 0 ? '#ef4444' : '#f59e0b' }}
           >
-            {leadsSummary.followUp.due} lead perlu di-follow-up
-            {leadsSummary.followUp.overdue > 0 && ` (${leadsSummary.followUp.overdue} terlambat)`}
+            {fuBadge.due} lead{fuBadge.personal ? ' milikmu' : ''} perlu di-follow-up
+            {fuBadge.overdue > 0 && ` (${fuBadge.overdue} terlambat)`}
           </Link>
         )}
         <Link

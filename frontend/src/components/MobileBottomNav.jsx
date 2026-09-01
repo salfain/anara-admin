@@ -6,6 +6,7 @@ import { navItems, PRIMARY_COUNT } from '../data/navItems';
 import MobileMoreSheet from './MobileMoreSheet';
 import { canSeeNavItem } from '../hooks/usePermissions';
 import useFollowUpStore from '../store/followUpStore';
+import { badgeCounts } from '../utils/followUpBadge';
 
 export default function MobileBottomNav() {
   const { user } = useAuthStore();
@@ -13,8 +14,15 @@ export default function MobileBottomNav() {
   const location = useLocation();
 
   const visible = navItems.filter((item) => canSeeNavItem(user, item));
-  const dueCount = useFollowUpStore((s) => s.due);
-  const overdueCount = useFollowUpStore((s) => s.overdue);
+  const badge = badgeCounts({
+    due: useFollowUpStore((s) => s.due),
+    overdue: useFollowUpStore((s) => s.overdue),
+    mineDue: useFollowUpStore((s) => s.mineDue),
+    mineOverdue: useFollowUpStore((s) => s.mineOverdue),
+    mineTotal: useFollowUpStore((s) => s.mineTotal),
+  });
+  const dueCount = badge.due;
+  const overdueCount = badge.overdue;
   const primary = visible.slice(0, PRIMARY_COUNT);
   const overflow = visible.slice(PRIMARY_COUNT);
 

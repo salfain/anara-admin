@@ -281,18 +281,26 @@ async function summary(req, res, next) {
       ),
       // GREATEST melewati NULL, jadi ini tanggal FU terakhir yang terisi —
       // dan jatuh kembali ke tanggal masuk kalau belum ada FU sama sekali.
+      //
+      // Dihitung dua kali: antrean seluruh tim, dan antrean orang yang sedang
+      // membukanya. "12 perlu di-follow-up" tidak berarti apa-apa bagi satu CS
+      // kalau dia tidak tahu mana yang bagiannya.
       pool.query(
         `SELECT
            COUNT(*) FILTER (WHERE gap >= $1) AS due,
-           COUNT(*) FILTER (WHERE gap >= $2) AS overdue
+           COUNT(*) FILTER (WHERE gap >= $2) AS overdue,
+           COUNT(*) FILTER (WHERE gap >= $1 AND punya_saya) AS mine_due,
+           COUNT(*) FILTER (WHERE gap >= $2 AND punya_saya) AS mine_overdue,
+           COUNT(*) FILTER (WHERE punya_saya) AS mine_total
          FROM (
            SELECT CURRENT_DATE - COALESCE(
              GREATEST(follow_up_1, follow_up_2, follow_up_3), entry_date
-           ) AS gap
+           ) AS gap,
+           pic_user_id = $4 AS punya_saya
            FROM leads
            WHERE status <> ALL($3::text[])
          ) t`,
-        [DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS, CLOSED_STATUSES]
+        [DUE_AFTER_DAYS, OVERDUE_AFTER_DAYS, CLOSED_STATUSES, req.user.id]
       ),
     ]);
 
@@ -304,6 +312,11 @@ async function summary(req, res, next) {
         followUp: {
           due: parseInt(followUp.rows[0].due, 10),
           overdue: parseInt(followUp.rows[0].overdue, 10),
+          mineDue: parseInt(followUp.rows[0].mine_due, 10),
+          mineOverdue: parseInt(followUp.rows[0].mine_overdue, 10),
+          // Dipakai untuk membedakan "tidak punya lead" dari "punya, semuanya
+          // sudah beres" — dua hal yang mustinya tampil berbeda.
+          mineTotal: parseInt(followUp.rows[0].mine_total, 10),
           dueAfterDays: DUE_AFTER_DAYS,
           overdueAfterDays: OVERDUE_AFTER_DAYS,
         },
