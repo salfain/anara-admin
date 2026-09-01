@@ -63,7 +63,7 @@ export default function Login() {
 
           <div className="flex flex-col gap-1.5 text-center lg:text-left">
             <div className="text-2xl font-bold text-gray-dark">Selamat datang kembali</div>
-            <div className="text-sm text-secondary">Masuk untuk mengakses dashboard CS</div>
+            <div className="text-sm text-secondary">Masuk untuk mengelola lead, paket, dan penagihan</div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

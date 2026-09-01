@@ -84,7 +84,7 @@ export default function Signup() {
             <>
               <div className="flex flex-col gap-1.5 text-center lg:text-left">
                 <div className="text-2xl font-bold text-gray-dark">Buat Akun</div>
-                <div className="text-sm text-secondary">Daftar untuk mulai pakai Anara Quick Replies</div>
+                <div className="text-sm text-secondary">Daftar untuk mulai pakai Anara Admin</div>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">

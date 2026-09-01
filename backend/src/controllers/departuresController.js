@@ -8,7 +8,13 @@ function serialize(row) {
     packageName: row.package_name || null,
     destination: row.destination || null,
     departDate: row.depart_date,
+    returnDate: row.return_date,
     seatStatus: row.seat_status,
+    capacity: row.capacity,
+    // Terisi dari jumlah PESERTA di Penagihan, bukan jumlah invoice — satu
+    // invoice bisa membawa empat orang.
+    booked: row.booked !== undefined ? Number(row.booked) : undefined,
+    seatsLeft: row.booked !== undefined ? Number(row.capacity) - Number(row.booked) : undefined,
     notes: row.notes,
   };
 }
@@ -34,9 +40,16 @@ async function list(req, res, next) {
     }
 
     const result = await pool.query(
-      `SELECT d.*, p.name AS package_name, p.destination
+      `SELECT d.*, p.name AS package_name, p.destination,
+              COALESCE(terisi.jumlah, 0) AS booked
        FROM package_departures d
        JOIN packages p ON p.id = d.package_id
+       LEFT JOIN (
+         SELECT b.departure_id, COUNT(bp.id) AS jumlah
+         FROM bookings b
+         JOIN booking_participants bp ON bp.booking_id = b.id
+         GROUP BY b.departure_id
+       ) terisi ON terisi.departure_id = d.id
        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
        ORDER BY d.depart_date ASC, p.name ASC`,
       params
@@ -50,6 +63,14 @@ async function list(req, res, next) {
 function validate(body) {
   if (!body.departDate) return 'Tanggal keberangkatan wajib diisi';
   if (!body.packageId) return 'Paket wajib dipilih';
+  // Pulang sebelum berangkat hampir pasti salah ketik, dan kalau lolos akan
+  // membuat lama perjalanan jadi negatif di mana-mana.
+  if (body.returnDate && body.returnDate < body.departDate) {
+    return 'Tanggal kepulangan tidak boleh sebelum keberangkatan';
+  }
+  if (body.capacity !== undefined && body.capacity !== null && Number(body.capacity) < 1) {
+    return 'Kapasitas minimal 1 orang';
+  }
   return null;
 }
 
@@ -58,11 +79,11 @@ async function create(req, res, next) {
     const error = validate(req.body);
     if (error) return res.status(400).json({ error });
 
-    const { packageId, departDate, seatStatus, notes } = req.body;
+    const { packageId, departDate, returnDate, seatStatus, capacity, notes } = req.body;
     const result = await pool.query(
-      `INSERT INTO package_departures (package_id, depart_date, seat_status, notes)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [packageId, departDate, (seatStatus || 'AVAILABLE').trim(), notes || null]
+      `INSERT INTO package_departures (package_id, depart_date, return_date, seat_status, capacity, notes)
+       VALUES ($1, $2, $3, $4, COALESCE($5, 40), $6) RETURNING *`,
+      [packageId, departDate, returnDate || null, (seatStatus || 'AVAILABLE').trim(), capacity || null, notes || null]
     );
     await logActivity(req.user.id, 'create', 'departure', result.rows[0].id, `menambah keberangkatan ${departDate}`);
     res.status(201).json({ data: serialize(result.rows[0]) });
@@ -78,15 +99,21 @@ async function create(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { departDate, seatStatus, notes } = req.body;
+    const { departDate, returnDate, seatStatus, capacity, notes } = req.body;
+    if (capacity !== undefined && capacity !== null && Number(capacity) < 1) {
+      return res.status(400).json({ error: 'Kapasitas minimal 1 orang' });
+    }
     const result = await pool.query(
       `UPDATE package_departures
        SET depart_date = COALESCE($1, depart_date),
-           seat_status = COALESCE($2, seat_status),
-           notes = $3,
+           return_date = COALESCE($2, return_date),
+           seat_status = COALESCE($3, seat_status),
+           capacity = COALESCE($4, capacity),
+           notes = $5,
            updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
-      [departDate || null, seatStatus ? seatStatus.trim() : null, notes || null, req.params.id]
+       WHERE id = $6 RETURNING *`,
+      [departDate || null, returnDate || null, seatStatus ? seatStatus.trim() : null,
+       capacity || null, notes || null, req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Keberangkatan tidak ditemukan' });
     res.json({ data: serialize(result.rows[0]) });

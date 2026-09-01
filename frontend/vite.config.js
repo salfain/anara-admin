@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'favicon.ico', 'anara-logo.svg'],
       manifest: {
-        name: 'Anara Quick Replies',
+        name: 'Anara Admin',
         short_name: 'Anara',
-        description: 'Knowledge base & quick replies untuk tim Customer Service Anara',
+        description: 'Kelola lead, follow-up, paket, dan penagihan tim Anara Explore',
         theme_color: '#2563eb',
         background_color: '#f9fafb',
         display: 'standalone',

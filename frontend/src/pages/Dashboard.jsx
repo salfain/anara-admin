@@ -19,6 +19,11 @@ const STATUS_COLORS = {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
+function fmtTanggalPendek(v) {
+  if (!v) return '-';
+  return new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+}
+
 function shortMonthLabel(key) {
   const [y, m] = key.split('-');
   return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y.slice(2)}`;
@@ -27,12 +32,13 @@ function shortMonthLabel(key) {
 export default function Dashboard() {
   const { user } = useAuthStore();
   const { can } = usePermissions();
-  const fuBadge = badgeCounts(leadsSummary?.followUp || {});
   const theme = useThemeStore((s) => s.theme);
   const tickColor = theme === 'dark' ? '#f1f5f9' : '#111827';
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [leadsSummary, setLeadsSummary] = useState(null);
+  const [departures, setDepartures] = useState([]);
+  const fuBadge = badgeCounts(leadsSummary?.followUp || {});
 
   const fetchStats = useCallback((showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -47,6 +53,16 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
+  // Keberangkatan terdekat butuh hak lihat paket; tanpa itu kartunya
+  // disembunyikan, bukan menampilkan error.
+  const bolehLihatPaket = can('packages.view');
+  useEffect(() => {
+    if (!bolehLihatPaket) return;
+    api.get('/departures', { params: { upcoming: '1' } })
+      .then(({ data }) => setDepartures(data.data.slice(0, 5)))
+      .catch(() => {});
+  }, [bolehLihatPaket]);
+
   useEffect(() => { fetchStats(true); fetchLeadsSummary(); }, [fetchStats, fetchLeadsSummary]);
   useAutoRefresh(() => fetchStats(false), 15000);
   useAutoRefresh(() => fetchLeadsSummary(), 15000);
@@ -54,12 +70,24 @@ export default function Dashboard() {
   const monthlyChart = (leadsSummary?.monthly || []).map((m) => ({ ...m, label: shortMonthLabel(m.month) }));
   const totalLeads = (leadsSummary?.byStatus || []).reduce((sum, s) => sum + s.count, 0);
 
-  const metrics = stats
+  const closing = (leadsSummary?.byStatus || []).find((s) => s.status === 'Sudah DP')?.count || 0;
+  const berikutnya = departures[0];
+
+  // Angka yang dipakai mengambil keputusan didahulukan; statistik quick replies
+  // turun ke bawah — itu alat bantu, bukan kabar yang ditunggu tiap pagi.
+  const metrics = leadsSummary
     ? [
-        { label: 'Total Balasan', value: stats.totalReplies },
-        { label: 'Total Pemakaian', value: stats.totalUsage },
-        { label: 'Kategori Teraktif', value: stats.topCategory },
-        { label: 'Anggota Tim', value: stats.totalUsers },
+        { label: 'Total Lead', value: totalLeads },
+        {
+          label: fuBadge.personal ? 'Perlu Follow-Up (kamu)' : 'Perlu Follow-Up',
+          value: fuBadge.due,
+          warna: fuBadge.overdue > 0 ? '#ef4444' : fuBadge.due > 0 ? '#f59e0b' : undefined,
+        },
+        { label: 'Total Closing', value: closing },
+        {
+          label: 'Keberangkatan Terdekat',
+          value: berikutnya ? fmtTanggalPendek(berikutnya.departDate) : '-',
+        },
       ]
     : [];
 
@@ -67,7 +95,7 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
       <div>
         <div className="text-[28px] font-bold text-gray-dark">Selamat datang kembali, {user?.name?.split(' ')[0]} 👋</div>
-        <div className="text-sm text-secondary mt-1">Berikut ringkasan aktivitas quick replies tim CS.</div>
+        <div className="text-sm text-secondary mt-1">Ringkasan lead, follow-up, dan keberangkatan terdekat.</div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -79,7 +107,7 @@ export default function Dashboard() {
         ))}
         {!loading && metrics.map((m) => (
           <div key={m.label} className="bg-surface border border-gray-med rounded-xl p-6 flex flex-col gap-1.5 transition-shadow hover:shadow-lg">
-            <div className="text-2xl font-bold" style={{ color: '#2563eb' }}>{m.value}</div>
+            <div className="text-2xl font-bold" style={{ color: m.warna || '#2563eb' }}>{m.value}</div>
             <div className="text-[13px] text-secondary">{m.label}</div>
           </div>
         ))}
@@ -176,6 +204,39 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {bolehLihatPaket && departures.length > 0 && (
+        <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-med">
+            <div className="text-base font-semibold text-gray-dark">Keberangkatan Terdekat</div>
+            <Link to="/packages" className="text-[13px] font-semibold" style={{ color: '#2563eb' }}>Lihat jadwal</Link>
+          </div>
+          {departures.map((d, i) => (
+            <div
+              key={d.id}
+              className={`px-6 py-3 flex items-center justify-between gap-3 ${i > 0 ? 'border-t border-gray-med' : ''}`}
+            >
+              <div className="min-w-0">
+                <div className="text-sm text-gray-dark truncate">{d.packageName}</div>
+                <div className="text-xs text-secondary">
+                  {fmtTanggalPendek(d.departDate)}
+                  {d.returnDate && ` - ${fmtTanggalPendek(d.returnDate)}`}
+                </div>
+              </div>
+              {/* Sisa seat dihitung dari jumlah peserta di Penagihan. */}
+              <div className="text-right shrink-0">
+                <div
+                  className="text-sm font-semibold"
+                  style={{ color: d.seatsLeft <= 0 ? '#ef4444' : d.seatsLeft <= 5 ? '#f59e0b' : 'var(--color-gray-dark)' }}
+                >
+                  {d.seatsLeft} sisa
+                </div>
+                <div className="text-[11px] text-secondary">{d.booked}/{d.capacity} terisi</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="bg-surface border border-gray-med rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-med">

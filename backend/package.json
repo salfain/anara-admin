@@ -1,7 +1,7 @@
 {
   "name": "anara-quick-replies-backend",
   "version": "1.0.0",
-  "description": "Backend API for Anara Quick Replies",
+  "description": "Backend API for Anara Admin",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

@@ -83,7 +83,7 @@ migrate()
   .then(async () => {
     await checkEncoding();
     app.listen(PORT, () => {
-      console.log(`Anara Quick Replies API running on port ${PORT}`);
+      console.log(`Anara Admin API running on port ${PORT}`);
     });
   })
   .catch((err) => {

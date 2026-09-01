@@ -128,3 +128,71 @@ test('deleting a package takes its departures with it', async () => {
   const sisa = await pool.query('SELECT count(*)::int AS n FROM package_departures');
   assert.equal(sisa.rows[0].n, 0);
 });
+
+test('seats left counts participants, not invoices', async () => {
+  await pool.query('DELETE FROM packages');
+  const pkg = (await pool.query(`INSERT INTO packages (name) VALUES ('Paket 3 Negara') RETURNING id`)).rows[0].id;
+  const dep = (await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date, return_date, capacity)
+     VALUES ($1, '2026-09-24', '2026-09-30', 40) RETURNING id`,
+    [pkg]
+  )).rows[0].id;
+
+  // Dua invoice, tapi enam orang. Menghitung invoice akan menjawab 38.
+  const b1 = (await pool.query(
+    `INSERT INTO bookings (departure_id, customer_name) VALUES ($1, 'DITA') RETURNING id`, [dep]
+  )).rows[0].id;
+  const b2 = (await pool.query(
+    `INSERT INTO bookings (departure_id, customer_name) VALUES ($1, 'BUDI') RETURNING id`, [dep]
+  )).rows[0].id;
+  for (const id of [b1, b1, b1, b1, b2, b2]) {
+    await pool.query(`INSERT INTO booking_participants (booking_id, name) VALUES ($1, 'peserta')`, [id]);
+  }
+
+  const { data } = await (await call('GET', '/departures')).json();
+  const row = data.find((d) => d.id === dep);
+  assert.equal(row.capacity, 40);
+  assert.equal(row.booked, 6, 'enam peserta, bukan dua invoice');
+  assert.equal(row.seatsLeft, 34);
+  assert.equal(row.returnDate, '2026-09-30');
+});
+
+test('a departure with no bookings is completely free', async () => {
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const dep = (await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date) VALUES ($1, '2027-01-10') RETURNING id`,
+    [pkg]
+  )).rows[0].id;
+
+  const { data } = await (await call('GET', '/departures')).json();
+  const row = data.find((d) => d.id === dep);
+  assert.equal(row.booked, 0);
+  assert.equal(row.seatsLeft, 40, 'kapasitas default 40');
+});
+
+test('a return date before the departure is refused', async () => {
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const res = await call('POST', '/departures', {
+    packageId: pkg, departDate: '2027-05-10', returnDate: '2027-05-01',
+  });
+  assert.equal(res.status, 400);
+});
+
+test('overbooking shows a negative figure rather than hiding it', async () => {
+  const pkg = (await pool.query(`SELECT id FROM packages LIMIT 1`)).rows[0].id;
+  const dep = (await pool.query(
+    `INSERT INTO package_departures (package_id, depart_date, capacity) VALUES ($1, '2027-02-01', 2) RETURNING id`,
+    [pkg]
+  )).rows[0].id;
+  const b = (await pool.query(
+    `INSERT INTO bookings (departure_id, customer_name) VALUES ($1, 'X') RETURNING id`, [dep]
+  )).rows[0].id;
+  for (let i = 0; i < 3; i++) {
+    await pool.query(`INSERT INTO booking_participants (booking_id, name) VALUES ($1, 'p')`, [b]);
+  }
+
+  const { data } = await (await call('GET', '/departures')).json();
+  const row = data.find((d) => d.id === dep);
+  // Dipotong jadi nol akan menyembunyikan justru keadaan yang paling genting.
+  assert.equal(row.seatsLeft, -1);
+});

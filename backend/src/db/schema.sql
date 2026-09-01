@@ -1,4 +1,4 @@
--- Anara Quick Replies - Database Schema
+-- Anara Admin - Database Schema
 -- PostgreSQL
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -86,6 +86,12 @@ CREATE TABLE IF NOT EXISTS package_departures (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   UNIQUE (package_id, depart_date)
 );
+
+-- Tanggal pulang, dan berapa orang yang muat. Kapasitasnya kolom, bukan angka
+-- di dalam kode: 40 adalah yang berlaku sekarang, bukan hukum alam — sewaktu-
+-- waktu ada keberangkatan yang pesawatnya lebih kecil atau lebih besar.
+ALTER TABLE package_departures ADD COLUMN IF NOT EXISTS return_date DATE;
+ALTER TABLE package_departures ADD COLUMN IF NOT EXISTS capacity INT NOT NULL DEFAULT 40;
 
 CREATE INDEX IF NOT EXISTS idx_departures_date ON package_departures(depart_date);
 

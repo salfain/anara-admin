@@ -36,7 +36,9 @@ export default function DeparturesTab({ canManage }) {
   const [search, setSearch] = useState('');
   const [savingId, setSavingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [form, setForm] = useState({ packageId: '', departDate: '', seatStatus: 'AVAILABLE' });
+  const [form, setForm] = useState({
+    packageId: '', departDate: '', returnDate: '', seatStatus: 'AVAILABLE', capacity: 40,
+  });
   const [adding, setAdding] = useState(false);
 
   const fetchRows = useCallback(async (showLoading = true) => {
@@ -83,10 +85,15 @@ export default function DeparturesTab({ canManage }) {
     if (!form.packageId || !form.departDate) return push('Paket dan tanggal wajib diisi', 'error');
     setAdding(true);
     try {
-      await api.post('/departures', { ...form, packageId: Number(form.packageId) });
+      await api.post('/departures', {
+        ...form,
+        packageId: Number(form.packageId),
+        capacity: Number(form.capacity) || 40,
+        returnDate: form.returnDate || null,
+      });
       // Paket dibiarkan terpilih: menambah beberapa tanggal untuk satu paket
       // adalah pemakaian yang paling sering.
-      setForm({ packageId: form.packageId, departDate: '', seatStatus: 'AVAILABLE' });
+      setForm({ ...form, departDate: '', returnDate: '' });
       fetchRows(false);
     } catch (err) {
       push(err.response?.data?.error || 'Gagal menambah keberangkatan', 'error');
@@ -149,6 +156,26 @@ export default function DeparturesTab({ canManage }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Kepulangan</label>
+            <input
+              type="date"
+              value={form.returnDate}
+              min={form.departDate || undefined}
+              onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+              className={input}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 w-[110px]">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Kapasitas</label>
+            <input
+              type="number"
+              min={1}
+              value={form.capacity}
+              onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+              className={input}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-dark">Status Seat</label>
             <select value={form.seatStatus} onChange={(e) => setForm({ ...form, seatStatus: e.target.value })} className={input}>
               {SEAT_UMUM.map((s) => (
@@ -172,20 +199,22 @@ export default function DeparturesTab({ canManage }) {
           <thead>
             <tr className="bg-gray-light text-[11px] font-semibold uppercase tracking-wide text-secondary">
               <th className="text-left px-4 py-3">Paket</th>
-              <th className="text-left px-4 py-3 w-[150px]">Keberangkatan</th>
-              <th className="text-left px-4 py-3 w-[170px]">Status Seat</th>
+              <th className="text-left px-4 py-3 w-[130px]">Berangkat</th>
+              <th className="text-left px-4 py-3 w-[130px]">Pulang</th>
+              <th className="text-left px-4 py-3 w-[130px]">Sisa Seat</th>
+              <th className="text-left px-4 py-3 w-[160px]">Status Seat</th>
               {canManage && <th className="px-4 py-3 w-[60px]" />}
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6"><Skeleton className="h-3.5" /></td>
+                <td colSpan={6} className="px-4 py-6"><Skeleton className="h-3.5" /></td>
               </tr>
             )}
             {!loading && terlihat.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center text-sm text-secondary py-12">
+                <td colSpan={6} className="text-center text-sm text-secondary py-12">
                   {upcomingOnly
                     ? 'Belum ada keberangkatan yang akan datang. Coba lihat semua tanggal.'
                     : 'Belum ada jadwal keberangkatan.'}
@@ -199,6 +228,8 @@ export default function DeparturesTab({ canManage }) {
                   {r.destination && <span className="text-secondary text-xs"> · {r.destination}</span>}
                 </td>
                 <td className="px-4 py-2.5 text-gray-dark">{fmtTanggal(r.departDate)}</td>
+                <td className="px-4 py-2.5 text-secondary">{fmtTanggal(r.returnDate)}</td>
+                <td className="px-4 py-2.5"><SisaSeat row={r} /></td>
                 <td className="px-4 py-2.5">
                   {canManage ? (
                     <select
@@ -245,5 +276,36 @@ export default function DeparturesTab({ canManage }) {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+  );
+}
+
+/**
+ * Sisa seat dihitung dari jumlah PESERTA di Penagihan, bukan jumlah invoice —
+ * satu invoice bisa membawa empat orang.
+ *
+ * Angka terisi ikut ditampilkan, bukan hanya sisanya: "4 dari 40" menjawab
+ * "sudah laku berapa" sekaligus "masih ada berapa", dan kalau sisanya salah,
+ * pembilangnya langsung terlihat.
+ */
+function SisaSeat({ row }) {
+  if (row.seatsLeft === undefined) return <span className="text-secondary">-</span>;
+
+  const penuh = row.seatsLeft <= 0;
+  const menipis = !penuh && row.seatsLeft <= 5;
+
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span
+        className="text-sm font-semibold"
+        style={{ color: penuh ? '#ef4444' : menipis ? '#f59e0b' : 'var(--color-gray-dark)' }}
+      >
+        {/* Kelebihan pesan tidak disembunyikan jadi nol — kalau peserta melebihi
+            kapasitas, itu justru yang paling perlu terlihat. */}
+        {row.seatsLeft}
+      </span>
+      <span className="text-[11px] text-secondary">
+        sisa · {row.booked}/{row.capacity} terisi
+      </span>
+    </span>
   );
 }
