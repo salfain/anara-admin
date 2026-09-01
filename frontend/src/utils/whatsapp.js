@@ -30,14 +30,16 @@ export function supportsTextPrefill() {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 }
 
-/** Pesan hanya ikut di URL kalau perangkatnya menyerahkannya dengan utuh. */
+/**
+ * Ponsel menerima pesannya apa adanya. Di tempat lain emoji 4-byte diturunkan
+ * dulu, karena kalau tidak WhatsApp menggantinya dengan karakter rusak.
+ */
 export function waLink(number, message) {
   const to = toWaNumber(number);
   if (!to) return null;
-  if (message && supportsTextPrefill()) {
-    return `https://wa.me/${to}?text=${encodeURIComponent(message)}`;
-  }
-  return `https://wa.me/${to}`;
+  if (!message) return `https://wa.me/${to}`;
+  const text = supportsTextPrefill() ? message : toBmpSafe(message);
+  return `https://wa.me/${to}?text=${encodeURIComponent(text)}`;
 }
 
 /**
@@ -67,6 +69,43 @@ export function formatPrice(value) {
   const n = Number(value);
   if (Number.isNaN(n)) return '';
   return new Intl.NumberFormat('id-ID').format(n);
+}
+
+/**
+ * Emoji 4-byte diturunkan ke padanan 3-byte, atau dibuang kalau tidak ada.
+ *
+ * WhatsApp membuang karakter 4-byte pada parameter ?text= — hasilnya "?".
+ * Karakter 3-byte lolos. Masalahnya BMP hampir tidak punya emoji: dari 11 jenis
+ * di template bawaan, hanya 5 yang punya padanan. Sisanya - termasuk emoji
+ * tangan menyembah yang paling sering dipakai - terpaksa dihilangkan.
+ *
+ * Karena itu yang diturunkan HANYA teks yang dititipkan lewat URL. Yang disalin
+ * ke clipboard tetap versi asli dengan emoji lengkap, jadi menempel selalu
+ * memberi hasil yang lebih baik daripada isian otomatis.
+ */
+const BMP_PENGGANTI = {
+  '\u{1F60A}': '\u263A',
+  '\u{1F604}': '\u263A',
+  '\u{1F609}': '\u263A',
+  '\u{1F60D}': '\u2665',
+  '\u{1F970}': '\u2665',
+  '\u{1F449}': '\u261E',
+  '\u{1F6A8}': '\u26A0',
+};
+
+export function toBmpSafe(text) {
+  let out = '';
+  for (const ch of String(text || '')) {
+    if (ch.codePointAt(0) <= 0xFFFF) {
+      out += ch;
+      continue;
+    }
+    // Yang tidak punya padanan dibuang, bukan diganti tanda tanya - lebih baik
+    // hilang daripada meninggalkan karakter rusak di pesan ke customer.
+    out += BMP_PENGGANTI[ch] || '';
+  }
+  // Membuang emoji bisa meninggalkan spasi dobel atau spasi menggantung.
+  return out.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+$/gm, '');
 }
 
 /** Semua pesan yang bisa dikirim dari satu template, sudah diratakan. */

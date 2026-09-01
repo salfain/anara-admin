@@ -88,8 +88,8 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
       if (prefilled) return;
       push(
         ok
-          ? 'Pesan disalin — tempel di WhatsApp dengan Ctrl+V'
-          : 'Chat dibuka, tapi gagal menyalin. Salin manual dari kotak pesan.',
+          ? 'Pesan sudah terisi dengan emoji sederhana. Mau emoji aslinya? Tempel dengan Ctrl+V.'
+          : 'Chat dibuka. Emoji asli hanya ada di kotak pesan — salin manual dari sana.',
         ok ? 'success' : 'error'
       );
     });
@@ -173,8 +173,9 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
             </div>
             {!prefilled && (
               <div className="text-[11px] rounded-lg px-3 py-2" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
-                Tombol di bawah menyalin pesan ini lalu membuka chat-nya — tinggal tempel (Ctrl+V) dan kirim.
-                Di WhatsApp Desktop emoji rusak kalau pesannya dititipkan lewat alamat, jadi lewat clipboard.
+                WhatsApp membuang emoji berukuran besar dari alamat tautan, jadi di desktop pesannya
+                terisi dengan emoji sederhana (☺ ⚠ ☞) dan sebagian dihilangkan.
+                Pesan ini juga disalin utuh — tempel dengan Ctrl+V kalau ingin emoji aslinya.
               </div>
             )}
           </div>
@@ -228,7 +229,7 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
               style={{ background: '#25D366' }}
             >
               <Send size={14} />
-              {prefilled ? 'Buka WhatsApp' : 'Salin & Buka WhatsApp'}
+              {prefilled ? 'Buka WhatsApp' : 'Isi & Buka WhatsApp'}
             </button>
           </div>
         </div>

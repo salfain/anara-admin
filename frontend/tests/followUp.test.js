@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 
 import {
-  toWaNumber, waLink, fillPlaceholders, templateSnippets, supportsTextPrefill,
+  toWaNumber, waLink, fillPlaceholders, templateSnippets, supportsTextPrefill, toBmpSafe,
 } from '../src/utils/whatsapp.js';
 import { withFollowUpToday, willShiftFollowUps, followUpState } from '../src/utils/followUp.js';
 
@@ -31,15 +31,29 @@ test('tautan hanya dibuat kalau nomornya masuk akal', () => {
   assert.equal(waLink('08123'), 'https://wa.me/628123');
 });
 
-test('di luar ponsel, pesan tidak dititipkan lewat URL', () => {
+test('di luar ponsel, emoji diturunkan sebelum masuk URL', () => {
   // wa.me mengalihkan ke api.whatsapp.com sambil mengkode ulang parameternya,
-  // dan di situ %F0%9F%98%8A berubah jadi "�" — terlihat langsung di address
-  // bar. Pesannya lewat clipboard; kalau ?text= dikembalikan tanpa syarat,
-  // emoji di seluruh template rusak lagi tanpa terlihat.
+  // dan di situ %F0%9F%98%8A berubah jadi karakter rusak — terlihat langsung di
+  // address bar. Yang lolos hanya karakter 3-byte.
   assert.equal(supportsTextPrefill(), false, 'lingkungan tes bukan ponsel');
   const link = waLink('08123', 'salam kenal ya 😊');
-  assert.equal(link, 'https://wa.me/628123');
-  assert.doesNotMatch(link, /text=/);
+  assert.equal(link, 'https://wa.me/628123?text=salam%20kenal%20ya%20%E2%98%BA');
+});
+
+test('tidak ada karakter 4-byte yang lolos ke URL desktop', () => {
+  // Satu saja yang lolos sudah cukup membuat karakter rusak muncul di pesan
+  // yang dibaca customer.
+  const semua = 'a 🙏🏻 b 😊 c 👋 d 💰 e 🥰 f 🚨 g 👉 h 😍 i 😄 j 😉';
+  const url = waLink('08123', semua);
+  const teks = decodeURIComponent(url.split('?text=')[1]);
+  assert.equal([...teks].some((c) => c.codePointAt(0) > 0xFFFF), false);
+  assert.doesNotMatch(teks, /�/);
+});
+
+test('emoji tanpa padanan dibuang, bukan diganti karakter rusak', () => {
+  assert.equal(toBmpSafe('halo 😊'), 'halo ☺');
+  assert.equal(toBmpSafe('halo 🙏'), 'halo');
+  assert.equal(toBmpSafe('🚨 penting'), '⚠ penting');
 });
 
 test('ponsel menyerahkan emoji dengan utuh, jadi boleh diisi di URL', () => {
