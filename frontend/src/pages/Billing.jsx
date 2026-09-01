@@ -7,6 +7,7 @@ import usePermissions from '../hooks/usePermissions';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Skeleton from '../components/Skeleton';
 import { eksporExcel } from '../utils/excelExport';
+import { opsiKota } from '../utils/kota';
 
 // Kolom centang, sesuai pengelompokan di spreadsheet.
 const CENTANG = [
@@ -425,12 +426,16 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
                 <td className="px-3 py-2 text-gray-dark">{p.name}</td>
                 {RUTE.map((t) => (
                   <td key={t.field} className="px-1 py-1">
-                    <input
-                      defaultValue={p[t.field] || ''}
+                    <select
+                      value={p[t.field] || ''}
                       disabled={!canManage}
-                      onBlur={(e) => e.target.value !== (p[t.field] || '') && onToggle(booking, p, t.field, e.target.value)}
-                      className="w-full h-7 px-1.5 text-xs bg-transparent text-gray-dark border border-transparent rounded hover:border-gray-med focus:border-primary focus:outline-none"
-                    />
+                      onChange={(e) => onToggle(booking, p, t.field, e.target.value)}
+                      className="w-full h-7 px-1 text-xs bg-transparent text-gray-dark border border-transparent rounded hover:border-gray-med focus:border-primary focus:outline-none"
+                    >
+                      {opsiKota(p[t.field]).map((kota) => (
+                        <option key={kota || 'kosong'} value={kota}>{kota || '—'}</option>
+                      ))}
+                    </select>
                   </td>
                 ))}
                 {CENTANG.map((c) => (
@@ -572,19 +577,37 @@ function DetailTiket({ peserta, booking, canManage, onToggle }) {
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {[...RUTE, ...TEKS].map((t) => (
-        <label key={t.field} className="flex flex-col gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary">{t.label}</span>
-          <input
-            defaultValue={peserta[t.field] || ''}
-            disabled={!canManage}
-            onBlur={(e) =>
-              e.target.value !== (peserta[t.field] || '') && onToggle(booking, peserta, t.field, e.target.value)
-            }
-            className="h-8 px-2 text-xs bg-surface text-gray-dark border border-gray-med rounded-lg focus:outline-none focus:border-primary"
-          />
-        </label>
-      ))}
+      {[...RUTE, ...TEKS].map((t) => {
+        const kolomKota = RUTE.some((r) => r.field === t.field);
+        const kelas =
+          'h-8 px-2 text-xs bg-surface text-gray-dark border border-gray-med rounded-lg focus:outline-none focus:border-primary';
+        return (
+          <label key={t.field} className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary">{t.label}</span>
+            {kolomKota ? (
+              <select
+                value={peserta[t.field] || ''}
+                disabled={!canManage}
+                onChange={(e) => onToggle(booking, peserta, t.field, e.target.value)}
+                className={kelas}
+              >
+                {opsiKota(peserta[t.field]).map((kota) => (
+                  <option key={kota || 'kosong'} value={kota}>{kota || '—'}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                defaultValue={peserta[t.field] || ''}
+                disabled={!canManage}
+                onBlur={(e) =>
+                  e.target.value !== (peserta[t.field] || '') && onToggle(booking, peserta, t.field, e.target.value)
+                }
+                className={kelas}
+              />
+            )}
+          </label>
+        );
+      })}
     </div>
   );
 }
