@@ -16,11 +16,21 @@ const CENTANG = [
   { field: 'bookedReturn', group: 'Booking Tiket', label: 'Pulang' },
 ];
 
+// Urutannya mengikuti spreadsheet: tiap kelompok punya kolom berangkat
+// (START) dan pulang (FINISH).
 const TEKS = [
-  { field: 'codeOutbound', label: 'Kode Brkt' },
-  { field: 'codeReturn', label: 'Kode Plg' },
+  { field: 'ticketOutbound', label: 'Tiket Brkt' },
+  { field: 'ticketReturn', label: 'Tiket Plg' },
   { field: 'airlineOutbound', label: 'Pesawat Brkt' },
   { field: 'airlineReturn', label: 'Pesawat Plg' },
+  { field: 'codeOutbound', label: 'Kode Brkt' },
+  { field: 'codeReturn', label: 'Kode Plg' },
+];
+
+// START dan FINISH peserta, kota asal dan kota kembali.
+const RUTE = [
+  { field: 'origin', label: 'Start' },
+  { field: 'destination', label: 'Finish' },
 ];
 
 function fmtTanggal(v) {
@@ -332,10 +342,13 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
       </div>
 
       <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full min-w-[900px] text-xs border-collapse">
+        <table className="w-full min-w-[1180px] text-xs border-collapse">
           <thead>
             <tr className="bg-gray-light text-[10px] font-semibold uppercase tracking-wide text-secondary">
-              <th className="text-left px-3 py-2 w-[200px]">Peserta</th>
+              <th className="text-left px-3 py-2 w-[180px]">Peserta</th>
+              {RUTE.map((t) => (
+                <th key={t.field} className="text-left px-2 py-2 w-[90px]">{t.label}</th>
+              ))}
               {CENTANG.map((c) => (
                 <th key={c.field} className="px-2 py-2 w-[70px]">
                   <div className="text-[8px] opacity-70">{c.group}</div>
@@ -351,7 +364,7 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
           <tbody>
             {booking.participants.length === 0 && (
               <tr>
-                <td colSpan={12} className="text-center text-secondary py-4">Belum ada peserta.</td>
+                <td colSpan={14} className="text-center text-secondary py-4">Belum ada peserta.</td>
               </tr>
             )}
             {booking.participants.map((p) => (
@@ -360,10 +373,17 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
                 className={`border-t border-gray-med ${savingId === p.id ? 'opacity-60' : ''}`}
                 style={sorot ? { borderLeft: '3px solid #f59e0b' } : undefined}
               >
-                <td className="px-3 py-2 text-gray-dark">
-                  {p.name}
-                  {p.origin && <span className="text-secondary"> · {p.origin}</span>}
-                </td>
+                <td className="px-3 py-2 text-gray-dark">{p.name}</td>
+                {RUTE.map((t) => (
+                  <td key={t.field} className="px-1 py-1">
+                    <input
+                      defaultValue={p[t.field] || ''}
+                      disabled={!canManage}
+                      onBlur={(e) => e.target.value !== (p[t.field] || '') && onToggle(booking, p, t.field, e.target.value)}
+                      className="w-full h-7 px-1.5 text-xs bg-transparent text-gray-dark border border-transparent rounded hover:border-gray-med focus:border-primary focus:outline-none"
+                    />
+                  </td>
+                ))}
                 {CENTANG.map((c) => (
                   <td key={c.field} className="px-2 py-2 text-center">
                     <input
@@ -488,7 +508,7 @@ function BookingCard({ booking, canManage, savingId, onToggle, onAddParticipant,
  */
 function DetailTiket({ peserta, booking, canManage, onToggle }) {
   const [buka, setBuka] = useState(false);
-  const terisi = TEKS.filter((t) => peserta[t.field]).length;
+  const terisi = [...RUTE, ...TEKS].filter((t) => peserta[t.field]).length;
 
   if (!buka) {
     return (
@@ -503,7 +523,7 @@ function DetailTiket({ peserta, booking, canManage, onToggle }) {
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {TEKS.map((t) => (
+      {[...RUTE, ...TEKS].map((t) => (
         <label key={t.field} className="flex flex-col gap-1">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-secondary">{t.label}</span>
           <input

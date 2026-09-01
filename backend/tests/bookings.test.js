@@ -180,3 +180,37 @@ test('departures already gone are left out of the reminder', async () => {
   // angkanya akan menumpuk sampai lencananya diabaikan.
   assert.equal(data.total, 0);
 });
+
+test('every column from the sheet can be filled in', async () => {
+  await pool.query('DELETE FROM bookings');
+  const dep = await keberangkatanBaru('2027-08-01');
+  const booking = (await (await call('POST', '/bookings', {
+    departureId: dep, invoiceNo: '01216/NAD-INV/IV/25', customerName: 'DILAH',
+  })).json()).data;
+
+  const peserta = (await (await call('POST', `/bookings/${booking.id}/participants`, {
+    name: 'VIDA RESTI',
+  })).json()).data;
+
+  // Persis kolom yang diisi tangan di spreadsheet: rute, nomor tiket, nama
+  // pesawat, dan kode booking, masing-masing berangkat dan pulang.
+  const isi = {
+    origin: 'JAKARTA',
+    destination: 'JAKARTA',
+    ticketOutbound: 'TKT-001',
+    ticketReturn: 'TKT-002',
+    airlineOutbound: 'GARUDA',
+    airlineReturn: 'GARUDA',
+    codeOutbound: 'ABC123',
+    codeReturn: 'XYZ789',
+  };
+  for (const [field, value] of Object.entries(isi)) {
+    await call('PUT', `/bookings/${booking.id}/participants/${peserta.id}`, { [field]: value });
+  }
+
+  const { data } = await (await call('GET', `/bookings?departureId=${dep}`)).json();
+  const p = data[0].participants[0];
+  for (const [field, value] of Object.entries(isi)) {
+    assert.equal(p[field], value, `${field} harus tersimpan`);
+  }
+});
