@@ -360,3 +360,74 @@ test('the trend shows every month, including the quiet ones', async () => {
   const sepi = data.find((d) => d.leads === 0);
   assert.equal(sepi.conversion, null);
 });
+
+test('a lead keeps a history of what happened, newest first', async () => {
+  await pool.query('DELETE FROM leads');
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628777', status: 'Baru' }),
+  })).json()).data;
+
+  await fetch(`${base}/leads/${lead.id}/notes`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ body: 'Sudah dikirim itinerary, minta waktu diskusi dengan suami.' }),
+  });
+
+  // Perubahan status dicatat sendiri — pertanyaan "kenapa jadi Batal" biasanya
+  // dimulai dari "kapan berubahnya, dan oleh siapa".
+  await fetch(`${base}/leads/${lead.id}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ ...toPayload(lead), status: 'Nego' }),
+  });
+
+  const { data } = await (await fetch(`${base}/leads/${lead.id}/notes`, { headers })).json();
+  assert.equal(data.length, 2);
+  assert.equal(data[0].kind, 'status');
+  assert.equal(data[0].body, 'Status: Baru → Nego');
+  assert.equal(data[0].author, 'A', 'tercatat siapa yang mengubah');
+  assert.equal(data[1].kind, 'note');
+});
+
+test('editing something else does not add a status entry', async () => {
+  await pool.query('DELETE FROM leads');
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628888', status: 'Nego' }),
+  })).json()).data;
+
+  await fetch(`${base}/leads/${lead.id}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ ...toPayload(lead), notes: 'ubah catatan saja' }),
+  });
+
+  const { data } = await (await fetch(`${base}/leads/${lead.id}/notes`, { headers })).json();
+  assert.equal(data.length, 0, 'riwayat hanya untuk yang benar-benar berubah');
+});
+
+test('an empty note is refused', async () => {
+  await pool.query('DELETE FROM leads');
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628999' }),
+  })).json()).data;
+
+  const res = await fetch(`${base}/leads/${lead.id}/notes`, {
+    method: 'POST', headers, body: JSON.stringify({ body: '   ' }),
+  });
+  assert.equal(res.status, 400);
+});
+
+test('deleting a lead takes its history with it', async () => {
+  await pool.query('DELETE FROM leads');
+  const lead = (await (await fetch(`${base}/leads`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ entryDate: '2026-08-01', whatsapp: '628111' }),
+  })).json()).data;
+  await fetch(`${base}/leads/${lead.id}/notes`, {
+    method: 'POST', headers, body: JSON.stringify({ body: 'halo' }),
+  });
+
+  await fetch(`${base}/leads/${lead.id}`, { method: 'DELETE', headers });
+  const sisa = await pool.query('SELECT count(*)::int AS n FROM lead_notes');
+  assert.equal(sisa.rows[0].n, 0, 'jangan tinggalkan catatan yatim');
+});

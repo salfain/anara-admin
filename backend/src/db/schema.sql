@@ -180,6 +180,21 @@ WHERE l.pic_user_id IS NULL
 -- disunting — angkanya akan terlihat meyakinkan padahal salah.
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS won_at TIMESTAMP;
 
+-- Riwayat percakapan per lead. Kolom FU cuma menyimpan tanggal, dan notes
+-- satu kotak yang tertimpa tiap kali disunting — jadi apa yang sebenarnya
+-- terjadi di tiap follow-up tidak tersimpan di mana pun.
+CREATE TABLE IF NOT EXISTS lead_notes (
+  id SERIAL PRIMARY KEY,
+  lead_id INT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  user_id INT REFERENCES users(id) ON DELETE SET NULL,
+  -- 'note' ditulis orang; 'status' dicatat sistem saat status berubah.
+  kind VARCHAR(20) NOT NULL DEFAULT 'note' CHECK (kind IN ('note', 'status')),
+  body TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lead_notes_lead ON lead_notes(lead_id, created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_leads_entry_date ON leads(entry_date);
 CREATE INDEX IF NOT EXISTS idx_leads_package ON leads(package_id);
 CREATE INDEX IF NOT EXISTS idx_leads_pic_user ON leads(pic_user_id);

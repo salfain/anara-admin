@@ -183,6 +183,13 @@ async function update(req, res, next) {
     );
 
     const row = withPackage.rows[0];
+    const statusLama = existing.rows[0].status;
+    if (statusLama !== row.status) {
+      await pool.query(
+        `INSERT INTO lead_notes (lead_id, user_id, kind, body) VALUES ($1, $2, 'status', $3)`,
+        [row.id, req.user.id, `Status: ${statusLama} → ${row.status}`]
+      );
+    }
     await logActivity(req.user.id, 'update', 'lead', row.id, `mengedit lead "${row.whatsapp}"`);
 
     res.json({ data: serialize(row) });
@@ -307,6 +314,54 @@ async function summary(req, res, next) {
   }
 }
 
+function serializeNote(row) {
+  return {
+    id: row.id,
+    kind: row.kind,
+    body: row.body,
+    author: row.author_name || null,
+    createdAt: row.created_at,
+  };
+}
+
+async function listNotes(req, res, next) {
+  try {
+    const result = await pool.query(
+      `SELECT n.*, u.name AS author_name
+       FROM lead_notes n LEFT JOIN users u ON u.id = n.user_id
+       WHERE n.lead_id = $1
+       ORDER BY n.created_at DESC, n.id DESC`,
+      [req.params.id]
+    );
+    res.json({ data: result.rows.map(serializeNote) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function addNote(req, res, next) {
+  try {
+    const body = String(req.body.body || '').trim();
+    if (!body) return res.status(400).json({ error: 'Catatan tidak boleh kosong' });
+
+    const lead = await pool.query('SELECT id FROM leads WHERE id = $1', [req.params.id]);
+    if (lead.rows.length === 0) return res.status(404).json({ error: 'Lead not found' });
+
+    const result = await pool.query(
+      `INSERT INTO lead_notes (lead_id, user_id, kind, body) VALUES ($1, $2, 'note', $3) RETURNING *`,
+      [req.params.id, req.user.id, body]
+    );
+    const withAuthor = await pool.query(
+      `SELECT n.*, u.name AS author_name FROM lead_notes n
+       LEFT JOIN users u ON u.id = n.user_id WHERE n.id = $1`,
+      [result.rows[0].id]
+    );
+    res.status(201).json({ data: serializeNote(withAuthor.rows[0]) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     const result = await pool.query('DELETE FROM leads WHERE id = $1 RETURNING *', [req.params.id]);
@@ -321,4 +376,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, remove, bulkCreate, summary };
+module.exports = { list, create, update, remove, bulkCreate, summary, listNotes, addNote };

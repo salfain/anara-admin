@@ -21,6 +21,9 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [opened, setOpened] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -29,11 +32,22 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
     setMessage('');
     setOpened(false);
     setLoading(true);
+    setNoteDraft('');
+    setHistory([]);
     api.get('/followup-templates')
       .then(({ data }) => setTemplates(data.data))
       .catch(() => push('Gagal memuat template follow-up', 'error'))
       .finally(() => setLoading(false));
   }, [open, push]);
+
+  // Riwayatnya dibaca di sini, bukan di halaman terpisah: yang dibutuhkan
+  // sebelum menulis pesan justru "kemarin dia bilang apa".
+  useEffect(() => {
+    if (!open || !lead?.id) return;
+    api.get(`/leads/${lead.id}/notes`)
+      .then(({ data }) => setHistory(data.data))
+      .catch(() => {});
+  }, [open, lead?.id]);
 
   // Satu daftar datar: tiap langkah dan tiap varian adalah pesan tersendiri.
   const snippets = useMemo(() => {
@@ -64,6 +78,21 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
       packageDates: lead.packageDates,
       packagePrice: lead.packagePrice,
     }));
+  }
+
+  async function saveNote() {
+    const body = noteDraft.trim();
+    if (!body) return;
+    setSavingNote(true);
+    try {
+      const { data } = await api.post(`/leads/${lead.id}/notes`, { body });
+      setHistory((h) => [data.data, ...h]);
+      setNoteDraft('');
+    } catch (err) {
+      push(err.response?.data?.error || 'Gagal menyimpan catatan', 'error');
+    } finally {
+      setSavingNote(false);
+    }
   }
 
   async function copy() {
@@ -171,6 +200,15 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
             <div className="text-[11px] text-secondary">
               Placeholder yang datanya kita punya sudah terisi. Sisanya masih dalam kurung siku — isi dulu sebelum kirim.
             </div>
+
+            <LeadHistory
+              history={history}
+              draft={noteDraft}
+              setDraft={setNoteDraft}
+              onSave={saveNote}
+              saving={savingNote}
+              canManage={canManage}
+            />
             {!prefilled && (
               <div className="text-[11px] rounded-lg px-3 py-2" style={{ background: 'var(--color-info-soft)', color: 'var(--color-info-soft-text)' }}>
                 WhatsApp membuang emoji berukuran besar dari alamat tautan, jadi di desktop pesannya
@@ -234,6 +272,70 @@ export default function SendFollowUpModal({ open, lead, canManage, onClose, onMa
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function waktuSingkat(iso) {
+  const d = new Date(iso);
+  const selisihHari = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (selisihHari === 0) return 'hari ini';
+  if (selisihHari === 1) return 'kemarin';
+  if (selisihHari < 7) return `${selisihHari} hari lalu`;
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' });
+}
+
+/**
+ * Riwayat lead: catatan yang ditulis orang, dan perubahan status yang dicatat
+ * sistem. Ditaruh di bawah kotak pesan supaya terbaca sebelum menulis — itu
+ * saat yang paling butuh tahu percakapan sebelumnya.
+ */
+function LeadHistory({ history, draft, setDraft, onSave, saving, canManage }) {
+  return (
+    <div className="border-t border-gray-med pt-3 flex flex-col gap-2">
+      <div className="text-xs font-semibold text-gray-dark">Riwayat</div>
+
+      {canManage && (
+        <div className="flex gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSave();
+              }
+            }}
+            placeholder="Catat hasil follow-up ini…"
+            className="flex-1 h-8 px-2.5 border border-gray-med rounded-lg text-xs bg-surface text-gray-dark focus:outline-none focus:border-primary"
+          />
+          <button
+            onClick={onSave}
+            disabled={saving || !draft.trim()}
+            className="h-8 px-3 bg-surface text-gray-dark border border-gray-med rounded-full btn-3d-secondary btn-3d-sm text-xs font-semibold cursor-pointer disabled:opacity-60 shrink-0"
+          >
+            {saving ? '...' : 'Simpan'}
+          </button>
+        </div>
+      )}
+
+      {history.length === 0 ? (
+        <div className="text-[11px] text-secondary py-1">
+          Belum ada riwayat. Catatan yang ditulis di sini akan terlihat saat follow-up berikutnya.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto">
+          {history.map((h) => (
+            <div key={h.id} className="text-[11px] flex gap-2">
+              <span className="text-secondary shrink-0 w-[68px]">{waktuSingkat(h.createdAt)}</span>
+              <span className={h.kind === 'status' ? 'text-secondary italic' : 'text-gray-dark'}>
+                {h.body}
+                {h.author && <span className="text-secondary"> · {h.author}</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

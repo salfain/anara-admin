@@ -11,4 +11,8 @@ router.post('/bulk', authenticate, requirePermission('leads.manage'), controller
 router.put('/:id', authenticate, requirePermission('leads.manage'), controller.update);
 router.delete('/:id', authenticate, requirePermission('leads.manage'), controller.remove);
 
+// Membaca riwayat cukup dengan hak lihat; menulisnya butuh hak kelola.
+router.get('/:id/notes', authenticate, requirePermission('leads.view'), controller.listNotes);
+router.post('/:id/notes', authenticate, requirePermission('leads.manage'), controller.addNote);
+
 module.exports = router;
