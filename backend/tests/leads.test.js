@@ -534,3 +534,70 @@ test('a lead keeps its package when the departure is deleted', async () => {
   assert.equal(setelah.departureId, null, 'tanggalnya lepas');
   assert.equal(setelah.packageId, pkg, 'tapi paketnya tetap — lead tidak kehilangan konteks');
 });
+
+test('the daily report counts one CS on one day', async () => {
+  await pool.query('DELETE FROM leads');
+  await pool.query('DELETE FROM packages');
+  await pool.query(`INSERT INTO users (id, email, name, role, status)
+                    VALUES (70, 'alvin@t.id', 'Alvin', 'cs', 'active') ON CONFLICT DO NOTHING`);
+  const korea = (await pool.query(`INSERT INTO packages (name) VALUES ('Korea') RETURNING id`)).rows[0].id;
+  const eropa = (await pool.query(`INSERT INTO packages (name) VALUES ('Eropa Barat') RETURNING id`)).rows[0].id;
+
+  const hariIni = '2026-08-28';
+  const kemarin = '2026-08-27';
+
+  // Milik Alvin hari ini: dua Korea, satu Eropa.
+  for (const pkg of [korea, korea, eropa]) {
+    await pool.query(
+      `INSERT INTO leads (entry_date, whatsapp, pic_user_id, package_id) VALUES ($1, '628', 70, $2)`,
+      [hariIni, pkg]
+    );
+  }
+  // Yang tidak boleh ikut: milik orang lain, dan milik Alvin tapi hari lain.
+  await pool.query(`INSERT INTO leads (entry_date, whatsapp, pic_user_id) VALUES ($1, '628', 1)`, [hariIni]);
+  await pool.query(`INSERT INTO leads (entry_date, whatsapp, pic_user_id) VALUES ($1, '628', 70)`, [kemarin]);
+
+  const { data } = await (await fetch(`${base}/leads/daily-report?date=${hariIni}&userId=70`, { headers })).json();
+  assert.equal(data.picName, 'Alvin');
+  assert.equal(data.newLeads, 3);
+  assert.deepEqual(data.byPackage, [
+    { label: 'Korea', count: 2 },
+    { label: 'Eropa Barat', count: 1 },
+  ]);
+});
+
+test('closings and follow-ups are counted on the day they happened', async () => {
+  await pool.query('DELETE FROM leads');
+  const hariIni = '2026-08-28';
+
+  // Closing hari ini, meski lead-nya masuk jauh sebelumnya.
+  await pool.query(
+    `INSERT INTO leads (entry_date, whatsapp, pic_user_id, status, won_at)
+     VALUES ('2026-01-01', '628', 70, 'Sudah DP', $1::date)`,
+    [hariIni]
+  );
+  // Di-follow-up hari ini di slot mana pun — slot ketiga sama sahnya.
+  await pool.query(
+    `INSERT INTO leads (entry_date, whatsapp, pic_user_id, follow_up_3)
+     VALUES ('2026-02-01', '628', 70, $1::date)`,
+    [hariIni]
+  );
+  // Di-follow-up kemarin, tidak ikut hari ini.
+  await pool.query(
+    `INSERT INTO leads (entry_date, whatsapp, pic_user_id, follow_up_1)
+     VALUES ('2026-02-01', '628', 70, '2026-08-27')`
+  );
+
+  const { data } = await (await fetch(`${base}/leads/daily-report?date=${hariIni}&userId=70`, { headers })).json();
+  assert.equal(data.newLeads, 0, 'tidak ada lead baru hari itu');
+  assert.equal(data.closing, 1);
+  assert.equal(data.followedUp, 1);
+});
+
+test('a day with nothing reports zeros rather than failing', async () => {
+  await pool.query('DELETE FROM leads');
+  const { data } = await (await fetch(`${base}/leads/daily-report?date=2026-08-28&userId=70`, { headers })).json();
+  assert.equal(data.newLeads, 0);
+  assert.equal(data.closing, 0);
+  assert.deepEqual(data.byPackage, []);
+});

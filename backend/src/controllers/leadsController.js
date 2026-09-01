@@ -397,6 +397,66 @@ async function addNote(req, res, next) {
   }
 }
 
+/**
+ * Angka untuk laporan harian CS yang dikirim ke grup tiap sore.
+ *
+ * Formatnya sudah dipakai tim, jadi yang diambil alih hanya penghitungannya —
+ * bagian yang paling lama dan paling mudah keliru. Teksnya tetap disusun dan
+ * dikirim manusia ke Telegram.
+ *
+ * Semuanya dihitung per PIC dan per tanggal, memakai pic_user_id supaya salah
+ * ketik nama tidak membuat laporan seseorang kosong.
+ */
+async function dailyReport(req, res, next) {
+  try {
+    const tanggal = req.query.date || new Date().toISOString().slice(0, 10);
+    const userId = req.query.userId ? Number(req.query.userId) : req.user.id;
+
+    const [baru, perPaket, closing, difollowup, user] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM leads WHERE pic_user_id = $1 AND entry_date = $2::date`,
+        [userId, tanggal]
+      ),
+      // Dikelompokkan menurut paket, dan jatuh ke destinasi kalau lead-nya
+      // belum menyebut paket — itu dua cara tim menulis baris yang sama.
+      pool.query(
+        `SELECT COALESCE(p.name, l.country, 'Belum ditentukan') AS label, COUNT(*)::int AS n
+         FROM leads l LEFT JOIN packages p ON p.id = l.package_id
+         WHERE l.pic_user_id = $1 AND l.entry_date = $2::date
+         GROUP BY 1 ORDER BY n DESC, 1 ASC`,
+        [userId, tanggal]
+      ),
+      // won_at baru terisi sejak fitur closing dicatat, jadi lead lama tidak
+      // ikut terhitung di tanggal mana pun.
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM leads
+         WHERE pic_user_id = $1 AND won_at::date = $2::date`,
+        [userId, tanggal]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM leads
+         WHERE pic_user_id = $1
+           AND $2::date IN (follow_up_1, follow_up_2, follow_up_3)`,
+        [userId, tanggal]
+      ),
+      pool.query('SELECT name FROM users WHERE id = $1', [userId]),
+    ]);
+
+    res.json({
+      data: {
+        date: tanggal,
+        picName: user.rows[0]?.name || null,
+        newLeads: baru.rows[0].n,
+        byPackage: perPaket.rows.map((r) => ({ label: r.label, count: r.n })),
+        closing: closing.rows[0].n,
+        followedUp: difollowup.rows[0].n,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function remove(req, res, next) {
   try {
     const result = await pool.query('DELETE FROM leads WHERE id = $1 RETURNING *', [req.params.id]);
@@ -411,4 +471,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, remove, bulkCreate, summary, listNotes, addNote };
+module.exports = { list, create, update, remove, bulkCreate, summary, listNotes, addNote, dailyReport };

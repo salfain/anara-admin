@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get('/', authenticate, requirePermission('leads.view'), controller.list);
 router.get('/summary', authenticate, requirePermission('leads.view'), controller.summary);
+router.get('/daily-report', authenticate, requirePermission('leads.view'), controller.dailyReport);
 router.post('/', authenticate, requirePermission('leads.manage'), controller.create);
 router.post('/bulk', authenticate, requirePermission('leads.manage'), controller.bulkCreate);
 router.put('/:id', authenticate, requirePermission('leads.manage'), controller.update);
