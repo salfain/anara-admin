@@ -14,6 +14,7 @@ const leadsRoutes = require('./routes/leads');
 const rolesRoutes = require('./routes/roles');
 const departuresRoutes = require('./routes/departures');
 const bookingsRoutes = require('./routes/bookings');
+const dailyReportsRoutes = require('./routes/dailyReports');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/departures', departuresRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/daily-reports', dailyReportsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

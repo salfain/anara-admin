@@ -220,6 +220,35 @@ CREATE TABLE IF NOT EXISTS lead_notes (
 
 CREATE INDEX IF NOT EXISTS idx_lead_notes_lead ON lead_notes(lead_id, created_at DESC);
 
+-- Laporan harian CS yang dikirim ke grup tiap sore.
+--
+-- Angkanya disimpan, bukan dihitung ulang saat dibaca. Ini keputusan sadar:
+-- yang berlaku adalah angka yang dilaporkan dan disetujui admin pada hari itu,
+-- meski data lead berubah setelahnya. Nilai awalnya boleh diambil dari data
+-- lead, tapi begitu tersimpan, laporan itu yang jadi catatan.
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id SERIAL PRIMARY KEY,
+  report_date DATE NOT NULL,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  new_leads INT NOT NULL DEFAULT 0,
+  -- Boleh kosong. Nol berarti "tidak ada yang janji transfer", sedangkan
+  -- kosong berarti belum dihitung, dan keduanya beda arti.
+  janji_tf INT,
+  total_closing INT NOT NULL DEFAULT 0,
+  total_followup INT NOT NULL DEFAULT 0,
+  -- Rincian per paket, satu baris per paket, seperti di pesan grup.
+  breakdown TEXT,
+  notes TEXT,
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  -- Satu laporan per orang per hari. Dua baris untuk hari yang sama tidak bisa
+  -- dijawab mana yang dipakai.
+  UNIQUE (report_date, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(report_date DESC);
+
 -- Penagihan: tahap setelah lead closing, sampai peserta berangkat.
 --
 -- Satu invoice punya satu customer dan beberapa peserta — di spreadsheet ini
