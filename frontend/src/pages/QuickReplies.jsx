@@ -10,10 +10,17 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import usePermissions from '../hooks/usePermissions';
 import { SkeletonCards } from '../components/Skeleton';
 import { copyText } from '../utils/clipboard';
+import { fillPlaceholders } from '../utils/whatsapp';
+import useAuthStore from '../store/authStore';
 
 export default function QuickReplies() {
   const push = useToastStore((s) => s.push);
   const { can } = usePermissions();
+  const currentUser = useAuthStore((s) => s.user);
+  // Lead yang sedang dilayani. Tanpa ini hanya [Nama CS] yang bisa diisi,
+  // karena placeholder lain butuh tahu customernya siapa.
+  const [leadUntuk, setLeadUntuk] = useState('');
+  const [leadOptions, setLeadOptions] = useState([]);
   const canManage = can('quick_replies.manage');
   const canDelete = can('quick_replies.delete');
 
@@ -69,6 +76,17 @@ export default function QuickReplies() {
 
   useAutoRefresh(fetchReplies, 15000, [search, category, packageId, sort, page]);
 
+  // Dibatasi ke lead yang masih berjalan: yang sudah closing atau batal tidak
+  // akan dikirimi quick reply lagi, dan daftarnya jadi lebih pendek.
+  useEffect(() => {
+    if (!can('leads.view')) return;
+    api.get('/leads')
+      .then(({ data }) => setLeadOptions(
+        data.data.filter((l) => l.status !== 'Sudah DP' && l.status !== 'Batal').slice(0, 200)
+      ))
+      .catch(() => {});
+  }, [can]);
+
   function clearFilters() {
     setSearch('');
     setCategory('');
@@ -76,8 +94,21 @@ export default function QuickReplies() {
     setPage(1);
   }
 
+  const leadDipilih = leadOptions.find((l) => String(l.id) === leadUntuk) || null;
+
+  function isiPlaceholder(teks) {
+    return fillPlaceholders(teks, {
+      csName: currentUser?.name,
+      leadName: leadDipilih?.name,
+      destination: leadDipilih?.country,
+      packageName: leadDipilih?.packageName,
+      packageDates: leadDipilih?.packageDates,
+      packagePrice: leadDipilih?.packagePrice,
+    });
+  }
+
   async function handleCopy(reply) {
-    if (!(await copyText(reply.answer))) {
+    if (!(await copyText(isiPlaceholder(reply.answer)))) {
       return push('Gagal menyalin', 'error');
     }
     try {
@@ -193,6 +224,22 @@ export default function QuickReplies() {
               </select>
             </div>
           </div>
+          {leadOptions.length > 0 && (
+            <div className="flex flex-col gap-1 min-w-0">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-secondary">Untuk lead</label>
+              <select
+                value={leadUntuk}
+                onChange={(e) => setLeadUntuk(e.target.value)}
+                title="Placeholder seperti [Nama] dan [Paket] terisi dari lead ini saat disalin"
+                className="h-9 px-2.5 border border-gray-med rounded-md text-[13px] bg-surface text-gray-dark max-w-[220px]"
+              >
+                <option value="">Tanpa lead</option>
+                {leadOptions.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name || l.whatsapp}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             onClick={clearFilters}
             disabled={!category && !packageId}
@@ -224,7 +271,7 @@ export default function QuickReplies() {
           {replies.map((reply) => (
             <ReplyCard
               key={reply.id}
-              reply={reply}
+              reply={{ ...reply, answer: isiPlaceholder(reply.answer) }}
               canEdit={canManage}
               canDelete={canDelete}
               onCopy={handleCopy}
@@ -276,7 +323,7 @@ export default function QuickReplies() {
       />
 
       <ReplyDetailModal
-        reply={viewing}
+        reply={viewing ? { ...viewing, answer: isiPlaceholder(viewing.answer) } : null}
         onClose={() => setViewing(null)}
         onCopy={handleCopy}
       />

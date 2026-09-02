@@ -152,3 +152,22 @@ test('placeholder yang datanya belum ada tetap dibiarkan utuh', () => {
   const filled = fillPlaceholders('Kak [Nama], paket [Paket]', { csName: 'Dita' });
   assert.equal(filled, 'Kak [Nama], paket [Paket]');
 });
+
+test('quick reply terisi dari lead yang sedang dilayani', () => {
+  // Sama seperti pesan follow-up: yang datanya ada diisi, sisanya dibiarkan.
+  const teks = 'Halo Kak [Nama], paket [Paket] berangkat [Tanggal Keberangkatan]. [Nama CS]';
+  const hasil = fillPlaceholders(teks, {
+    csName: 'Alvin',
+    leadName: 'Bu Nana',
+    packageName: 'Paket 3 Negara',
+    packageDates: '2026-12-29',
+  });
+  assert.equal(hasil, 'Halo Kak Bu Nana, paket Paket 3 Negara berangkat 2026-12-29. Alvin');
+});
+
+test('tanpa lead, hanya nama CS yang terisi', () => {
+  // Quick Replies dibuka tanpa memilih lead adalah keadaan yang wajar, bukan
+  // kesalahan, jadi placeholder lain tetap dibiarkan untuk diisi tangan.
+  const hasil = fillPlaceholders('Halo Kak [Nama], saya [Nama CS]', { csName: 'Alvin' });
+  assert.equal(hasil, 'Halo Kak [Nama], saya Alvin');
+});
